@@ -12,3 +12,5 @@
 *.out
 
 slaythespire
+
+.DS_Store
