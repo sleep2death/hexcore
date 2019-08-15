@@ -81,6 +81,12 @@
 			"editor.wordBasedSuggestions": true,
 		
 			// Enable parameter hints
-			"editor.parameterHints.enabled": true
+			"editor.parameterHints.enabled": true,
+			"files.exclude": {
+				"**/.classpath": true,
+				"**/.project": true,
+				"**/.settings": true,
+				"**/.factorypath": true
+			}
 	}
 }
