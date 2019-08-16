@@ -31,7 +31,7 @@ type Target uint
 
 const (
 	// Enemy as the card target
-	Enemy Target = iota
+	Enemy Target = iota + 1
 	// AllEnemy as the card targets
 	AllEnemy
 	// Self as the card targets
@@ -45,7 +45,7 @@ const (
 )
 
 func (c Target) String() string {
-	return [...]string{"enemy", "allEnemy", "self", "none", "selfAndEnemy", "all"}[c]
+	return [...]string{"nil", "enemy", "allEnemy", "self", "none", "selfAndEnemy", "all"}[c]
 }
 
 // Rarity is the rarity of the card
@@ -105,7 +105,7 @@ type Action uint
 
 const (
 	// DealDamage to enemy(s)
-	DealDamage Action = iota
+	DealDamage Action = iota + 1
 	// GainBlock for self
 	GainBlock
 	// Vulnerable creatures take 50% more damage from Attacks.
@@ -113,7 +113,7 @@ const (
 )
 
 func (c Action) String() string {
-	return [...]string{"deal_damage", "gain_block", "vulnerable"}[c]
+	return [...]string{"nil", "deal_damage", "gain_block", "vulnerable"}[c]
 }
 
 // info - basic infomation of the card
@@ -124,26 +124,33 @@ type info struct {
 	Rarity Rarity
 }
 
-// Numbers hold all numbers of the card
-type Numbers struct {
-	Cost   int
-	Damage int
-	Block  int
-	Heal   int
-	Level  int
-	Target Target
+// Attrs hold all changeable attributes of the card
+type Attrs struct {
+	Cost    int
+	Damage  int
+	Block   int
+	Heal    int
+	Level   int
+	Target  Target
+	Actions *Actions
 }
 
 // Upgrade a numbers with another numbers
-func (n *Numbers) Upgrade(u *Numbers) *Numbers {
-	return &Numbers{
+func (n *Attrs) Upgrade(u *Attrs) (attr *Attrs) {
+	attr = &Attrs{
 		Cost:   n.Cost + u.Cost,
 		Damage: n.Damage + u.Damage,
 		Block:  n.Block + u.Block,
 		Heal:   n.Heal + u.Heal,
-		Target: u.Target,    // upgdate to the target number
-		Level:  n.Level + 1, // update level + 1
+		Target: n.Target + u.Target, // upgdate to the target number
+		Level:  n.Level + 1,         // update level + 1
 	}
+
+	if u.Actions != nil {
+		attr.Actions = u.Actions
+	}
+
+	return
 }
 
 // Actions - action holder of the card
@@ -158,30 +165,24 @@ type Actions struct {
 // CardBase -
 type CardBase struct {
 	*info
-	actions *Actions
-	base    *Numbers
-	upgrade *Numbers
-	current *Numbers
+	base    *Attrs
+	upgrade *Attrs
+	current *Attrs
 }
 
 // Info return the basic information of the card
 func (card *CardBase) String() string {
-	return fmt.Sprintf("%+v", card.info)
+	return fmt.Sprintf("[%s]", card.info.ID)
 }
 
 // Base return the base numbers of the card
-func (card *CardBase) Base() *Numbers {
+func (card *CardBase) Base() *Attrs {
 	return card.base
 }
 
 // Current return the current numbers of the card
-func (card *CardBase) Current() *Numbers {
+func (card *CardBase) Current() *Attrs {
 	return card.current
-}
-
-// Actions return the current numbers of the card
-func (card *CardBase) Actions() *Actions {
-	return card.actions
 }
 
 // Upgrade the card
@@ -192,9 +193,8 @@ func (card *CardBase) Upgrade() {
 // Card interface
 type Card interface {
 	String() string
-	Base() *Numbers
-	Current() *Numbers
-	Actions() *Actions
+	Base() *Attrs
+	Current() *Attrs
 	Upgrade()
 }
 

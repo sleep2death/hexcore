@@ -8,12 +8,13 @@ import (
 
 func TestCardCreate(t *testing.T) {
 	card := CreateCardFunc["Strike"]()
-	assert.EqualValues(t, card.String(), "&{ID:strike CType:attack Color:red Rarity:basic}")
-	assert.EqualValues(t, card.Actions().Play[0], DealDamage)
+	assert.EqualValues(t, card.String(), "[strike]")
+	assert.EqualValues(t, card.Base().Actions.Play[0], DealDamage)
 	// Upgrade the card
 	card.Upgrade()
-	assert.EqualValues(t, card.Base().Level, 1)  // level from 0 to 1
-	assert.EqualValues(t, card.Base().Damage, 9) // damage from 6 to 9
+	assert.EqualValues(t, card.Base().Level, 1)           // level from 0 to 1
+	assert.EqualValues(t, card.Base().Damage, 9)          // damage from 6 to 9
+	assert.Equal(t, "enemy", card.Base().Target.String()) // if upgrade target not set, then not change it
 }
 
 func TestPile(t *testing.T) {
@@ -53,6 +54,7 @@ func TestPile(t *testing.T) {
 	t.Logf("%v", p.cards)
 
 	// shuffle the pile with a given static number seed
-	// p.Shuffle(5)
-	// assert.Equal(t, p.cards[0].String(), "&{ID:defend CType:skill Color:red Rarity:basic}")
+	p.Shuffle(5)
+	t.Logf("%v", p.cards)
+	assert.Equal(t, p.cards[0].String(), "[defend]")
 }
