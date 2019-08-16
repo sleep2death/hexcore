@@ -98,42 +98,102 @@ func (c CardType) String() string {
 	return [...]string{"attack", "skill", "power", "status", "curse"}[c]
 }
 
-// Info struct
+// CardAction is the type of the card actions
+type CardAction uint
+
+const (
+	// DealDamage to enemy(s)
+	DealDamage CardAction = iota
+	// GainBlock for self
+	GainBlock
+)
+
+func (c CardAction) String() string {
+	return [...]string{"deal_damage", "gain_block"}[c]
+}
+
+// info - basic infomation of the card
 type info struct {
-	id     string
-	cost   int
-	ctype  CardType
-	color  CardColor
-	rarity CardRarity
-	target CardTarget
+	ID     string
+	CType  CardType
+	Color  CardColor
+	Rarity CardRarity
 }
 
-type nums struct {
-	baseDamage int
-	baseBlock  int
-	baseHeal   int
-	damage     int
-	block      int
-	heal       int
+// CardNum hold all numbers of the card
+type CardNum struct {
+	Cost   int
+	Damage int
+	Block  int
+	Heal   int
+	Target CardTarget
 }
 
-// BasicInfo return the basic information of the card
-func (i *info) Info() string {
-	return fmt.Sprintf("%+v", i)
+// actions - action holder of the card
+type actions struct {
+	preBattle  []CardAction
+	postBattle []CardAction
+	preTurn    []CardAction
+	postTurn   []CardAction
+	play       []CardAction
 }
 
-// NumInfo return the basic information of the card
-func (n *nums) NumInfo() string {
-	return fmt.Sprintf("%+v", n)
+func (a *actions) PreBattle() []CardAction {
+	return a.preBattle
 }
 
-// ICard interface
-type ICard interface {
+func (a *actions) PostBattle() []CardAction {
+	return a.postBattle
+}
+
+func (a *actions) PreTurn() []CardAction {
+	return a.preTurn
+}
+
+func (a *actions) PostTurn() []CardAction {
+	return a.postTurn
+}
+
+func (a *actions) Play() []CardAction {
+	return a.play
+}
+
+// CardBase -
+type CardBase struct {
+	*info
+	*actions
+	base    *CardNum
+	current *CardNum
+}
+
+// Info return the basic information of the card
+func (card *CardBase) Info() string {
+	return fmt.Sprintf("%+v", card.info)
+}
+
+// GetBase return the base numbers of the card
+func (card *CardBase) GetBase() *CardNum {
+	return card.base
+}
+
+// GetCurrent return the current numbers of the card
+func (card *CardBase) GetCurrent() *CardNum {
+	return card.current
+}
+
+// Card interface
+type Card interface {
 	Info() string
-	NumInfo() string
+	GetBase() *CardNum
+	GetCurrent() *CardNum
+	PreBattle() []CardAction
+	PostBattle() []CardAction
+	PreTurn() []CardAction
+	PostTurn() []CardAction
+	Play() []CardAction
 }
 
 // CreateCardFunc map for generating cards
-var CreateCardFunc = map[string](func() ICard){
+var CreateCardFunc = map[string](func() Card){
 	"Strike": CreateCardStrike,
 }
