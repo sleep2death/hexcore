@@ -257,9 +257,14 @@ func (card *CardBase) Copy() Card {
 }
 
 // Init the card by copying the base status to current
-func (card *CardBase) Init() {
+func (card *CardBase) Init() error {
+	if len(card.id) > 0 || card.current != nil {
+		return fmt.Errorf("card %v has been initialized already", card)
+	}
 	card.id = shortuuid.New()       //generate a new uuid for the card
 	card.current = card.base.Copy() // copy the base status to the current status
+
+	return nil
 }
 
 // Info return the basic information of the card
@@ -297,7 +302,7 @@ type Card interface {
 
 	Copy() Card
 	Upgrade()
-	Init()
+	Init() error
 }
 
 // Pile of cards
@@ -365,8 +370,6 @@ func (p *Pile) CreateCardByName(cardSet []string) error {
 		}
 
 		card := CreateCardFunc[s]()
-		card.Init()
-
 		p.AddToTop(card)
 	}
 
