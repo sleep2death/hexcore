@@ -8,17 +8,10 @@
 		}
 	],
 	"settings": {
-		"editor.formatOnSave": true,
-		"go.useLanguageServer": true,
+		"go.useLanguageServer": false,
 		"go.testFlags": [
 			"-v"
 		],
-		"vim.easymotion": true,
-		"vim.sneak": true,
-		"vim.incsearch": true,
-		"vim.useSystemClipboard": true,
-		"vim.useCtrlKeys": true,
-		"vim.hlsearch": true,
 		"vim.insertModeKeyBindings": [
 			{
 				"before": [
@@ -31,24 +24,6 @@
 			}
 		],
 		"vim.normalModeKeyBindingsNonRecursive": [
-			{
-				"before": [
-					"<leader>",
-					"d"
-				],
-				"after": [
-					"d",
-					"d"
-				]
-			},
-			{
-				"before": [
-					"<C-n>"
-				],
-				"commands": [
-					":nohl"
-				]
-			},
 			{
 				"before": [
 					"leader",

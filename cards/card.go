@@ -88,9 +88,9 @@ const (
 	// Power card type
 	// A permanent upgrade for the entire combat encounter. Some Powers give flat stats like Strength or Dexterity. Others require certain conditions to be met that combat. Each copy of a given power can only be played once per combat.
 	Power
-	// Status card type
+	// StatusT card type
 	// Unplayable cards added to the deck during combat encounters. They are designed to bloat the deck and prevent the player from drawing beneficial cards, with some of them having additional negative effects. Unlike Curses, Status cards are removed from the deck at the end of combat.
-	Status
+	StatusT
 	// CurseT card type
 	// Unplayable cards added to the deck during in-game events. Similar to status cards they are designed to bloat the deck and prevent the player from drawing beneficial cards, with some of them having additional negative effects during combat. Unlike Statuses, Curse cards persist in the players' deck until removed by other means.
 	CurseT
@@ -104,8 +104,14 @@ func (c CType) String() string {
 type Action uint
 
 const (
+	// SelectEnemy - get the enemy as the target of the card, waiting for user input
+	SelectEnemy Action = iota + 1
+	// SelectAllEnemies - get all enemies as the target of the card
+	SelectAllEnemies
+	// SelectSelf - get self as the target of the card
+	SelectSelf
 	// DealDamage to enemy(s)
-	DealDamage Action = iota + 1
+	DealDamage
 	// GainBlock for self
 	GainBlock
 	// Vulnerable creatures take 50% more damage from Attacks.
@@ -113,7 +119,7 @@ const (
 )
 
 func (c Action) String() string {
-	return [...]string{"nil", "deal_damage", "gain_block", "vulnerable"}[c]
+	return [...]string{"nil", "select_enemy", "select_all_enemies", "select_self", "deal_damage", "gain_block", "vulnerable"}[c]
 }
 
 // info - basic infomation of the card
@@ -124,8 +130,8 @@ type info struct {
 	Rarity Rarity
 }
 
-// Attrs hold all changeable attributes of the card
-type Attrs struct {
+// Status hold all changeable attributes of the card
+type Status struct {
 	Cost    int
 	Damage  int
 	Block   int
@@ -135,19 +141,33 @@ type Attrs struct {
 	Actions *Actions
 }
 
+// Copy the status
+func (n *Status) Copy() (s *Status) {
+	s = &Status{
+		Cost:    n.Cost,
+		Damage:  n.Damage,
+		Block:   n.Block,
+		Heal:    n.Heal,
+		Target:  n.Target,
+		Level:   n.Level,
+		Actions: n.Actions.Copy(),
+	}
+	return
+}
+
 // Upgrade a numbers with another numbers
-func (n *Attrs) Upgrade(u *Attrs) (attr *Attrs) {
-	attr = &Attrs{
+func (n *Status) Upgrade(u *Status) (s *Status) {
+	s = &Status{
 		Cost:   n.Cost + u.Cost,
 		Damage: n.Damage + u.Damage,
 		Block:  n.Block + u.Block,
 		Heal:   n.Heal + u.Heal,
-		Target: n.Target + u.Target, // upgdate to the target number
+		Target: n.Target + u.Target, // upgdate to the target number; if the u.Target == 0, then target not change
 		Level:  n.Level + 1,         // update level + 1
 	}
 
 	if u.Actions != nil {
-		attr.Actions = u.Actions
+		s.Actions = u.Actions
 	}
 
 	return
@@ -159,15 +179,81 @@ type Actions struct {
 	PostBattle []Action
 	PreTurn    []Action
 	PostTurn   []Action
+	Select     []Action
 	Play       []Action
+}
+
+// Copy the actions
+func (a *Actions) Copy() *Actions {
+	c := &Actions{}
+
+	if len(a.PreBattle) > 0 {
+		c.PreBattle = make([]Action, len(a.PreBattle))
+		copy(c.PreBattle, a.PreBattle)
+	}
+
+	if len(a.PostBattle) > 0 {
+		c.PostBattle = make([]Action, len(a.PostBattle))
+		copy(c.PostBattle, a.PostBattle)
+	}
+
+	if len(a.PreTurn) > 0 {
+		c.PreTurn = make([]Action, len(a.PreTurn))
+		copy(c.PreTurn, a.PreTurn)
+	}
+
+	if len(a.PostTurn) > 0 {
+		c.PostTurn = make([]Action, len(a.PostTurn))
+		copy(c.PostTurn, a.PostTurn)
+	}
+
+	if len(a.Select) > 0 {
+		c.Select = make([]Action, len(a.Select))
+		copy(c.Select, a.Select)
+	}
+
+	if len(a.Play) > 0 {
+		c.Play = make([]Action, len(a.Play))
+		copy(c.Play, a.Play)
+	}
+
+	return c
 }
 
 // CardBase -
 type CardBase struct {
 	*info
-	base    *Attrs
-	upgrade *Attrs
-	current *Attrs
+	base    *Status
+	upgrade *Status
+	current *Status
+}
+
+// Copy the card
+func (card *CardBase) Copy() Card {
+	c := &CardBase{
+		// card info will never be modified after created, so use a pointer is fine
+		info: card.info,
+		// card upgrade status will never be modified after created, so use a pointer is fine
+		// when upgrade a card, use the base status add the upgrade status, then return the new upgraded status
+		upgrade: card.upgrade,
+		// some cards may change the base status permantly in the battle
+		// like card [Ritual Dagger] -  if this card kills an enemy then permanently increase this card's damage by 3(5)
+		// if card["feed"] upgraded in the battle, then original card in the deck will also be upgraded
+		// manager can use "base" status permanently change the card
+		base: card.base,
+		// card current status in battle
+	}
+
+	if card.current != nil {
+		c.current = card.current.Copy()
+	}
+
+	return c
+}
+
+// Init the card by copying the base status to current
+func (card *CardBase) Init() {
+	card.current = card.base.Copy()
 }
 
 // Info return the basic information of the card
@@ -176,12 +262,12 @@ func (card *CardBase) String() string {
 }
 
 // Base return the base numbers of the card
-func (card *CardBase) Base() *Attrs {
+func (card *CardBase) Base() *Status {
 	return card.base
 }
 
 // Current return the current numbers of the card
-func (card *CardBase) Current() *Attrs {
+func (card *CardBase) Current() *Status {
 	return card.current
 }
 
@@ -193,13 +279,18 @@ func (card *CardBase) Upgrade() {
 // Card interface
 type Card interface {
 	String() string
-	Base() *Attrs
-	Current() *Attrs
+
+	Base() *Status
+	Current() *Status
+
+	Copy() Card
 	Upgrade()
+	Init()
 }
 
 // Pile of cards
 type Pile struct {
+	seed  int64
 	cards []Card
 }
 
@@ -230,9 +321,30 @@ func (p *Pile) Draw(n int, target *Pile) error {
 }
 
 // Shuffle the pile
-func (p *Pile) Shuffle(seed int64) {
-	rand.Seed(seed)
+func (p *Pile) Shuffle() {
+	rand.Seed(p.seed)
 	rand.Shuffle(len(p.cards), func(i, j int) { p.cards[i], p.cards[j] = p.cards[j], p.cards[i] })
+}
+
+// CardsNum - get the card number of the pile
+func (p *Pile) CardsNum() int {
+	return len(p.cards)
+}
+
+// CreateCardByName - create the card by the given name
+func (p *Pile) CreateCardByName(cardSet []string) error {
+	for _, s := range cardSet {
+		if CreateCardFunc[s] == nil {
+			// clear all the items by setting the slice to nil
+			// see: https://stackoverflow.com/questions/16971741/how-do-you-clear-a-slice-in-go
+			p.cards = nil
+			return fmt.Errorf("create function for card [%s] not found", s)
+		}
+
+		p.AddToTop(CreateCardFunc[s]())
+	}
+
+	return nil
 }
 
 // CreateCardFunc map for generating cards

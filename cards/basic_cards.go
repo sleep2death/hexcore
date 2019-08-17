@@ -8,14 +8,15 @@ type CardStrike struct {
 // CreateCardStrike -
 func CreateCardStrike() Card {
 	actions := &Actions{
-		Play: []Action{DealDamage},
+		Play:   []Action{DealDamage},
+		Select: []Action{SelectEnemy},
 	}
 
 	return &CardStrike{
 		CardBase: &CardBase{
 			info:    &info{"strike", Attack, Red, Basic},
-			base:    &Attrs{Damage: 6, Target: Enemy, Cost: 1, Actions: actions},
-			upgrade: &Attrs{Damage: 3},
+			base:    &Status{Damage: 6, Target: Enemy, Cost: 1, Actions: actions},
+			upgrade: &Status{Damage: 3},
 		},
 	}
 }
@@ -28,13 +29,14 @@ type CardDefend struct {
 // CreateCardDefend -
 func CreateCardDefend() Card {
 	actions := &Actions{
-		Play: []Action{GainBlock},
+		Select: []Action{SelectSelf},
+		Play:   []Action{GainBlock},
 	}
 	return &CardBash{
 		CardBase: &CardBase{
 			info:    &info{"defend", Skill, Red, Basic},
-			base:    &Attrs{Block: 8, Target: Enemy, Cost: 2, Actions: actions},
-			upgrade: &Attrs{Block: 3, Target: Enemy, Cost: 0},
+			base:    &Status{Block: 8, Target: Enemy, Cost: 2, Actions: actions},
+			upgrade: &Status{Block: 3},
 		},
 	}
 }
@@ -48,12 +50,14 @@ type CardBash struct {
 // CreateCardBash -
 func CreateCardBash() Card {
 	actions := &Actions{
-		Play: []Action{Vulnerable},
+		Select: []Action{SelectEnemy},
+		Play:   []Action{Vulnerable},
 	}
 	return &CardBash{
 		CardBase: &CardBase{
-			info: &info{"bash", Attack, Red, Basic},
-			base: &Attrs{Damage: 8, Target: Enemy, Cost: 2, Actions: actions},
+			info:    &info{"bash", Attack, Red, Basic},
+			base:    &Status{Damage: 8, Target: Enemy, Cost: 2, Actions: actions},
+			upgrade: &Status{Damage: 2},
 		},
 	}
 }
