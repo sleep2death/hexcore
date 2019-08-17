@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+
+	"github.com/lithammer/shortuuid"
 )
 
 // Color defines the color of the card
@@ -223,6 +225,7 @@ func (a *Actions) Copy() *Actions {
 // CardBase -
 type CardBase struct {
 	*info
+	id      string
 	base    *Status
 	upgrade *Status
 	current *Status
@@ -231,6 +234,8 @@ type CardBase struct {
 // Copy the card
 func (card *CardBase) Copy() Card {
 	c := &CardBase{
+		// generate a new uuid for the card
+		id: shortuuid.New(),
 		// card info will never be modified after created, so use a pointer is fine
 		info: card.info,
 		// card upgrade status will never be modified after created, so use a pointer is fine
@@ -253,12 +258,18 @@ func (card *CardBase) Copy() Card {
 
 // Init the card by copying the base status to current
 func (card *CardBase) Init() {
-	card.current = card.base.Copy()
+	card.id = shortuuid.New()       //generate a new uuid for the card
+	card.current = card.base.Copy() // copy the base status to the current status
 }
 
 // Info return the basic information of the card
 func (card *CardBase) String() string {
 	return fmt.Sprintf("[%s]", card.info.ID)
+}
+
+// ID return the uuid of the card
+func (card *CardBase) ID() string {
+	return card.id
 }
 
 // Base return the base numbers of the card
@@ -279,6 +290,7 @@ func (card *CardBase) Upgrade() {
 // Card interface
 type Card interface {
 	String() string
+	ID() string
 
 	Base() *Status
 	Current() *Status
@@ -320,6 +332,17 @@ func (p *Pile) Draw(n int, target *Pile) error {
 	return nil
 }
 
+// FindCardByID return the card index with given id
+func (p *Pile) FindCardByID(id string) int {
+	for i, c := range p.cards {
+		if c.ID() == id {
+			return i
+		}
+	}
+
+	return -1
+}
+
 // Shuffle the pile
 func (p *Pile) Shuffle() {
 	rand.Seed(p.seed)
@@ -341,7 +364,10 @@ func (p *Pile) CreateCardByName(cardSet []string) error {
 			return fmt.Errorf("create function for card [%s] not found", s)
 		}
 
-		p.AddToTop(CreateCardFunc[s]())
+		card := CreateCardFunc[s]()
+		card.Init()
+
+		p.AddToTop(card)
 	}
 
 	return nil
