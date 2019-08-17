@@ -37,4 +37,8 @@ indent_size = 2
 
 [{go.mod,go.sum,*.go}]
 indent_style = tab
-indent_size = 8
+indent_size = 4
+
+[{*.code-workspace}]
+indent_style = tab
+indent_size = 4

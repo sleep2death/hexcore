@@ -9,7 +9,6 @@
 	],
 	"settings": {
     "editor.fontFamily": "Fira Code Retina",
-    "editor.fontSize": 14,
     "editor.fontLigatures": true,
 
     "go.useLanguageServer": true,
@@ -18,8 +17,6 @@
 		],
 		"go.lintOnSave": "workspace",
 		"vim.leader": ",",
-		"go.buildOnSave": "off",
-		"go.vetOnSave": "off",
 		"vim.insertModeKeyBindings": [
 			{
 				"before": [
@@ -57,6 +54,7 @@
 			"<C-a>": false,
 			"<C-f>": false,
 			"<C-b>": false
-    }
+    },
+    "editor.fontSize": 13
   }
 }

@@ -28,44 +28,11 @@ func TestCardCreate(t *testing.T) {
 }
 
 func TestPile(t *testing.T) {
+	p := &Pile{}
+	p.CreateCardByName([]string{"Strike", "Strike", "Strike", "Strike", "Strike"})
 
-	p := &Pile{
-
-		cards: make([]Card, 0, 50),
-	}
-
-	// create a defaut pile
-
-	p.AddToTop(
-
-		CreateCardFunc["Strike"](),
-
-		CreateCardFunc["Strike"](),
-
-		CreateCardFunc["Strike"](),
-
-		CreateCardFunc["Strike"](),
-
-		CreateCardFunc["Strike"](),
-	)
-
-	pp := &Pile{
-
-		cards: make([]Card, 0, 50),
-	}
-
-	pp.AddToTop(
-
-		CreateCardFunc["Defend"](),
-
-		CreateCardFunc["Defend"](),
-
-		CreateCardFunc["Defend"](),
-
-		CreateCardFunc["Defend"](),
-
-		CreateCardFunc["Bash"](),
-	)
+	pp := &Pile{}
+	pp.CreateCardByName([]string{"Defend", "Defend", "Defend", "Defend", "Bash"})
 
 	pp.Draw(len(pp.cards), p)
 
