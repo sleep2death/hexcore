@@ -372,7 +372,6 @@ func (p *Pile) CreateCardByName(cardSet []string) error {
 		card := CreateCardFunc[s]()
 		p.AddToTop(card)
 	}
-
 	return nil
 }
 

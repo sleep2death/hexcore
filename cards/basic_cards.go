@@ -19,7 +19,6 @@ func CreateCardStrike() (card Card) {
 			upgrade: &Status{Damage: 3},
 		},
 	}
-
 	card.Init()
 	return
 }
@@ -42,7 +41,6 @@ func CreateCardDefend() (card Card) {
 			upgrade: &Status{Block: 3},
 		},
 	}
-
 	card.Init()
 	return
 }
@@ -66,7 +64,6 @@ func CreateCardBash() (card Card) {
 			upgrade: &Status{Damage: 2},
 		},
 	}
-
 	card.Init()
 	return
 }

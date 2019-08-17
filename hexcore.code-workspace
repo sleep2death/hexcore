@@ -8,10 +8,18 @@
 		}
 	],
 	"settings": {
-		"go.useLanguageServer": false,
+    "editor.fontFamily": "Fira Code Retina",
+    "editor.fontSize": 14,
+    "editor.fontLigatures": true,
+
+    "go.useLanguageServer": true,
 		"go.testFlags": [
 			"-v"
 		],
+		"go.lintOnSave": "workspace",
+		"vim.leader": ",",
+		"go.buildOnSave": "off",
+		"go.vetOnSave": "off",
 		"vim.insertModeKeyBindings": [
 			{
 				"before": [
@@ -29,57 +37,26 @@
 					"leader",
 					"w"
 				],
-				"commands": [
-					"workbench.action.files.save",
-				]
-			}
+				"commands": [":w"]
+			},
+			{
+				"before": [
+					"<space>",
+				],
+				"after": ["/"]
+			},
+			{
+				"before": [
+					"leader",
+					"leader",
+				],
+				"commands": ["workbench.action.showCommands"]
+			},
 		],
-		"vim.leader": ",",
 		"vim.handleKeys": {
 			"<C-a>": false,
-			"<C-f>": false
-		},
-		"eslint.validate": [
-			{
-				"language": "vue",
-				"autoFix": true
-			},
-			{
-				"language": "html",
-				"autoFix": true
-			},
-			{
-				"language": "javascript",
-				"autoFix": true
-			}
-		],
-		// Controls if quick suggestions should show up while typing
-		"editor.quickSuggestions": {
-			"other": true,
-			"comments": false,
-			"strings": false
-		},
-		// Controls if suggestions should be accepted on 'Enter' - in addition to 'Tab'. Helps to avoid ambiguity between inserting new lines or accepting suggestions. The value 'smart' means only accept a suggestion with Enter when it makes a textual change
-		"editor.acceptSuggestionOnEnter": "on",
-		// Controls the delay in ms after which quick suggestions will show up.
-		"editor.quickSuggestionsDelay": 10,
-		// Controls if suggestions should automatically show up when typing trigger characters
-		"editor.suggestOnTriggerCharacters": true,
-		// Controls if pressing tab inserts the best suggestion and if tab cycles through other suggestions
-		"editor.tabCompletion": "on",
-		// Controls whether sorting favours words that appear close to the cursor
-		"editor.suggest.localityBonus": true,
-		// Controls how suggestions are pre-selected when showing the suggest list
-		"editor.suggestSelection": "recentlyUsed",
-		// Enable word based suggestions
-		"editor.wordBasedSuggestions": true,
-		// Enable parameter hints
-		"editor.parameterHints.enabled": true,
-		"files.exclude": {
-			"**/.classpath": true,
-			"**/.project": true,
-			"**/.settings": true,
-			"**/.factorypath": true
-		}
-	}
+			"<C-f>": false,
+			"<C-b>": false
+    }
+  }
 }
