@@ -43,22 +43,23 @@ func (p *Pile) DrawCard(i int, target *Pile) error {
 		return errDrawIndex
 	}
 
-	card := p.cards[i]
-	p.RemoveCard(i)
-
+	card, err := p.RemoveCard(i)
+	if err != nil {
+		return err
+	}
 	target.AddToTop(card)
-
 	return nil
 }
 
 // RemoveCard from the pile
-func (p *Pile) RemoveCard(i int) error {
+func (p *Pile) RemoveCard(i int) (Card, error) {
 	if i < 0 || i > len(p.cards)-1 {
-		return errDrawIndex
+		return nil, errDrawIndex
 	}
+	card := p.cards[i]
 	copy(p.cards[i:], p.cards[i+1:])
 	p.cards = p.cards[:len(p.cards)-1]
-	return nil
+	return card, nil
 }
 
 // FindCardByID return the card index with given id
@@ -95,7 +96,7 @@ func (p *Pile) CardsNum() int {
 func (p *Pile) CreateCardByName(cardSet []string) error {
 	for _, s := range cardSet {
 		if CreateCardFunc[s] == nil {
-			// clear all the items by setting the slice to nil
+			// clear all the items reference by setting the slice to nil
 			// see: https://stackoverflow.com/questions/16971741/how-do-you-clear-a-slice-in-go
 			p.cards = nil
 			return fmt.Errorf("create function for card [%s] not found", s)

@@ -69,9 +69,42 @@ func (m *Manager) Exaust(card Card) error {
 	if idx < 0 {
 		return errCardNotExist
 	}
+	// draw the card from hand pile into exaust pile
+	return m.hand.DrawCard(idx, m.exaust)
+}
+
+// ExaustAll cards from hand
+func (m *Manager) ExaustAll() error {
+	// should exaust the card one by one
+	// some cards will trigger actions when exausted
+	for m.hand.CardsNum() > 0 {
+		if err := m.Exaust(m.hand.cards[0]); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 // Discard cards from hand pile to discard pile
-func (m *Manager) Discard(card Card) {
+func (m *Manager) Discard(card Card) error {
+	idx := m.hand.FindCardByID(card.ID())
+	if idx < 0 {
+		return errCardNotExist
+	}
+	// draw the card from hand pile into exaust pile
+	return m.hand.DrawCard(idx, m.discard)
+}
+
+// DiscardAll cards from hand
+func (m *Manager) DiscardAll() error {
+	// should discard the card one by one
+	// some cards will trigger actions when discarded
+	for m.hand.CardsNum() > 0 {
+		if err := m.Discard(m.hand.cards[0]); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
