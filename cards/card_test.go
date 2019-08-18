@@ -8,7 +8,6 @@ import (
 )
 
 func TestCardCreate(t *testing.T) {
-
 	card := CreateCardFunc["Strike"]()
 
 	assert.EqualValues(t, card.String(), "[strike]")
@@ -57,12 +56,10 @@ func TestPile(t *testing.T) {
 	// init all the cards in the pile
 
 	for _, card := range p.cards {
-
 		card.Init()
-
 	}
 
-	assert.Equal(t, 2, p.FindCardByID(p.cards[2].ID()))
+	assert.Equal(t, 2, p.FindCardIndexByID(p.cards[2].ID()))
 
 }
 
@@ -105,7 +102,6 @@ func TestCardCopy(t *testing.T) {
 	s.Base().Damage = 100
 
 	assert.Equal(t, 100, c.Base().Damage)
-
 }
 
 func TestManager(t *testing.T) {
@@ -115,9 +111,7 @@ func TestManager(t *testing.T) {
 	err := m.Init([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
 
 	if err != nil {
-
 		t.Error(err)
-
 	}
 
 	assert.Equal(t, 10, len(m.deck.cards))
@@ -135,9 +129,7 @@ func TestManager(t *testing.T) {
 	err = m.Init([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
 
 	if err != nil {
-
 		t.Error(err)
-
 	}
 
 	// copy the deck cards into draw pile, and shuffle
@@ -145,29 +137,19 @@ func TestManager(t *testing.T) {
 	err = m.Shuffle()
 
 	if err != nil {
-
 		t.Error(err)
-
 	}
 
 	// t.Log(m.deck.cards, m.draw.cards)
 
 	// [[bash] [defend] [defend] [strike] [strike] [strike] [strike] [defend] [defend] [strike]
-
+	// draw 5 cards from draw pile to hand pile
 	err = m.Draw(5)
-
 	if err != nil {
-
 		t.Error(err)
-
 	}
 
 	assert.Equal(t, 5, m.draw.CardsNum()) // [[bash] [defend] [defend] [strike] [strike]]
-
 	assert.Equal(t, 5, m.hand.CardsNum()) // [[strike] [strike] [defend] [defend] [strike]]
-
-	t.Log(m.draw.cards)
-
-	t.Log(m.hand.cards)
 
 }

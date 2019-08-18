@@ -9,6 +9,7 @@
 	],
 	"settings": {
     "editor.fontFamily": "Fira Code Retina",
+    "editor.fontSize": 13,
     "editor.fontLigatures": true,
 
     "go.useLanguageServer": true,
@@ -38,12 +39,6 @@
 			},
 			{
 				"before": [
-					"<space>",
-				],
-				"after": ["/"]
-			},
-			{
-				"before": [
 					"leader",
 					"leader",
 				],
@@ -54,7 +49,6 @@
 			"<C-a>": false,
 			"<C-f>": false,
 			"<C-b>": false
-    },
-    "editor.fontSize": 13
+    }
   }
 }

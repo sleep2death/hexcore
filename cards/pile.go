@@ -1,7 +1,6 @@
 package cards
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 )
@@ -25,10 +24,10 @@ func (p *Pile) AddToBottom(c ...Card) {
 // Draw n card(s) to the target pile
 func (p *Pile) Draw(n int, target *Pile) error {
 	if n <= 0 {
-		return fmt.Errorf("n(%d) should be larger than 0", n)
+		return errDrawNumber
 	}
 	if n > len(p.cards) {
-		return errors.New("not enough card(s) to draw")
+		return errNotEnoughCards
 	}
 
 	idx := len(p.cards) - n
@@ -38,8 +37,36 @@ func (p *Pile) Draw(n int, target *Pile) error {
 	return nil
 }
 
+// DrawCard draw one card by the given index to the target pile
+func (p *Pile) DrawCard(i int, target *Pile) error {
+	if i < 0 || i > len(p.cards)-1 {
+		return errDrawIndex
+	}
+
+	card := p.cards[i]
+	p.RemoveCard(i)
+
+	target.AddToTop(card)
+
+	return nil
+}
+
+// RemoveCard from the pile
+func (p *Pile) RemoveCard(i int) error {
+	if i < 0 || i > len(p.cards)-1 {
+		return errDrawIndex
+	}
+	copy(p.cards[i:], p.cards[i+1:])
+	p.cards = p.cards[:len(p.cards)-1]
+	return nil
+}
+
 // FindCardByID return the card index with given id
 func (p *Pile) FindCardByID(id string) int {
+	if p.CardsNum() == 0 {
+		return -1
+	}
+
 	for i, c := range p.cards {
 		if c.ID() == id {
 			return i
@@ -51,6 +78,10 @@ func (p *Pile) FindCardByID(id string) int {
 
 // Shuffle the pile
 func (p *Pile) Shuffle() {
+	if p.CardsNum() <= 0 {
+		return
+	}
+
 	rand.Seed(p.seed)
 	rand.Shuffle(len(p.cards), func(i, j int) { p.cards[i], p.cards[j] = p.cards[j], p.cards[i] })
 }
