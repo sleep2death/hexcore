@@ -69,6 +69,7 @@ func (m *Manager) Exaust(card Card) error {
 	if idx < 0 {
 		return errCardNotExist
 	}
+	// TODO: exaust action triger here
 	// draw the card from hand pile into exaust pile
 	return m.hand.DrawCard(idx, m.exaust)
 }
@@ -92,6 +93,7 @@ func (m *Manager) Discard(card Card) error {
 	if idx < 0 {
 		return errCardNotExist
 	}
+	// TODO: discard action trigger here
 	// draw the card from hand pile into exaust pile
 	return m.hand.DrawCard(idx, m.discard)
 }

@@ -14,7 +14,8 @@
 
     "go.useLanguageServer": true,
 		"go.testFlags": [
-			"-v"
+      "-v",
+      "race"
 		],
 		"go.lintOnSave": "workspace",
 		"vim.leader": ",",
