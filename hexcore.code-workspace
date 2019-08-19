@@ -2,20 +2,13 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "C:\\Users\\aspir\\workspace\\slay\\com\\megacrit\\cardcrawl"
 		}
 	],
 	"settings": {
-    "editor.fontFamily": "Fira Code Retina",
-    "editor.fontSize": 13,
-    "editor.fontLigatures": true,
-
     "go.useLanguageServer": true,
 		"go.testFlags": [
       "-v",
-      "race"
+      "-race"
 		],
 		"go.lintOnSave": "workspace",
 		"vim.leader": ",",
