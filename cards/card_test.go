@@ -12,8 +12,6 @@ func TestCardCreate(t *testing.T) {
 
 	assert.EqualValues(t, card.String(), "[strike]")
 
-	assert.EqualValues(t, card.Base().Actions.Play[0], DealDamage)
-
 	// Upgrade the card
 
 	card.Upgrade()
@@ -106,7 +104,6 @@ func TestCardCopy(t *testing.T) {
 
 	// the current status pointer should not be the same
 	assert.NotEqual(t, fmt.Sprintf("%p", c.Current()), fmt.Sprintf("%p", s.Current()))
-	assert.NotEqual(t, fmt.Sprintf("%p", c.Current().Actions), fmt.Sprintf("%p", s.Current().Actions))
 
 	// like card [Ritual Dagger] -  if this card kills an enemy then permanently increase this card's damage by 3(5)
 	// if card[Ritual Dagger] upgraded in the battle, then original card in the deck will also be upgraded
@@ -119,7 +116,7 @@ func TestManager(t *testing.T) {
 
 	m := &Manager{}
 
-	err := m.Init([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
+	err := m.Create([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
 
 	if err != nil {
 		t.Error(err)
@@ -129,7 +126,7 @@ func TestManager(t *testing.T) {
 
 	// if a card name not exist, then return an error, and clear the pile
 
-	err = m.Init([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "ABC", "Defend", "Bash"})
+	err = m.Create([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "ABC", "Defend", "Bash"})
 
 	assert.EqualError(t, err, "create function for card [ABC] not found")
 
@@ -137,7 +134,7 @@ func TestManager(t *testing.T) {
 
 	// create the deck
 
-	err = m.Init([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
+	err = m.Create([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
 
 	if err != nil {
 		t.Error(err)
@@ -185,7 +182,7 @@ func TestManager(t *testing.T) {
 	assert.Equal(t, m.discard.cards[0], dCard)
 
 	// create the deck
-	err = m.Init([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
+	err = m.Create([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
 	if err != nil {
 		t.Error(err)
 	}
