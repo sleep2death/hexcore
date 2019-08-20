@@ -2,15 +2,13 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "C:\\Users\\aspir\\workspace\\slay\\com\\megacrit\\cardcrawl"
 		}
 	],
 	"settings": {
     "go.useLanguageServer": true,
 		"go.testFlags": [
-			"-v"
+      "-v",
+      "-race"
 		],
 		"go.lintOnSave": "workspace",
 		"vim.leader": ",",

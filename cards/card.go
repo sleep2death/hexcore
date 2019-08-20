@@ -1,9 +1,12 @@
 package cards
 
 import (
+	"errors"
 	"fmt"
+	"math/rand"
 
 	"github.com/lithammer/shortuuid"
+	"github.com/sleep2death/hexcore/actions"
 )
 
 // Color defines the color of the card
@@ -100,29 +103,6 @@ func (c CType) String() string {
 	return [...]string{"attack", "skill", "power", "status", "curse"}[c]
 }
 
-// Action is the type of the card actions
-type Action uint
-
-const (
-	// SelectEnemy - get the enemy as the target of the card, waiting for user input
-	SelectEnemy Action = iota + 1
-	// SelectAllEnemies - get all enemies as the target of the card
-	SelectAllEnemies
-	// SelectSelf - get self as the target of the card
-	SelectSelf
-	// DealDamage to enemy(s)
-	DealDamage
-	// GainBlock for self
-	GainBlock
-	// Vulnerable creatures take 50% more damage from Attacks.
-	Vulnerable
-)
-
-func (c Action) String() string {
-	return [...]string{"nil", "select_enemy", "select_all_enemies", "select_self", "deal_damage", "gain_block", "vulnerable"}[c]
-}
-
-// info - basic infomation of the card
 type info struct {
 	ID     string
 	CType  CType
@@ -132,25 +112,23 @@ type info struct {
 
 // Status hold all changeable attributes of the card
 type Status struct {
-	Cost    int
-	Damage  int
-	Block   int
-	Heal    int
-	Level   int
-	Target  Target
-	Actions *Actions
+	Cost   int
+	Damage int
+	Block  int
+	Heal   int
+	Level  int
+	Target Target
 }
 
 // Copy the status
 func (n *Status) Copy() (s *Status) {
 	s = &Status{
-		Cost:    n.Cost,
-		Damage:  n.Damage,
-		Block:   n.Block,
-		Heal:    n.Heal,
-		Target:  n.Target,
-		Level:   n.Level,
-		Actions: n.Actions.Copy(),
+		Cost:   n.Cost,
+		Damage: n.Damage,
+		Block:  n.Block,
+		Heal:   n.Heal,
+		Target: n.Target,
+		Level:  n.Level,
 	}
 	return
 }
@@ -166,58 +144,7 @@ func (n *Status) Upgrade(u *Status) (s *Status) {
 		Level:  n.Level + 1,         // update level + 1
 	}
 
-	if u.Actions != nil {
-		s.Actions = u.Actions
-	}
-
 	return
-}
-
-// Actions - action holder of the card
-type Actions struct {
-	PreBattle  []Action
-	PostBattle []Action
-	PreTurn    []Action
-	PostTurn   []Action
-	Select     []Action
-	Play       []Action
-}
-
-// Copy the actions
-func (a *Actions) Copy() *Actions {
-	c := &Actions{}
-
-	if len(a.PreBattle) > 0 {
-		c.PreBattle = make([]Action, len(a.PreBattle))
-		copy(c.PreBattle, a.PreBattle)
-	}
-
-	if len(a.PostBattle) > 0 {
-		c.PostBattle = make([]Action, len(a.PostBattle))
-		copy(c.PostBattle, a.PostBattle)
-	}
-
-	if len(a.PreTurn) > 0 {
-		c.PreTurn = make([]Action, len(a.PreTurn))
-		copy(c.PreTurn, a.PreTurn)
-	}
-
-	if len(a.PostTurn) > 0 {
-		c.PostTurn = make([]Action, len(a.PostTurn))
-		copy(c.PostTurn, a.PostTurn)
-	}
-
-	if len(a.Select) > 0 {
-		c.Select = make([]Action, len(a.Select))
-		copy(c.Select, a.Select)
-	}
-
-	if len(a.Play) > 0 {
-		c.Play = make([]Action, len(a.Play))
-		copy(c.Play, a.Play)
-	}
-
-	return c
 }
 
 // CardBase -
@@ -290,6 +217,23 @@ func (card *CardBase) Upgrade() {
 	card.base = card.base.Upgrade(card.upgrade)
 }
 
+// Play must be handled in the real card
+func (card *CardBase) Play() ([]actions.Action, error) {
+	return nil, errors.New("card must handle the call of play function")
+}
+
+// Exaust must be handled in the real card
+func (card *CardBase) Exaust() ([]actions.Action, error) {
+	return nil, nil
+	// return nil, errors.New("card must handle the call of exaust function")
+}
+
+// Discard must be handled in the real card
+func (card *CardBase) Discard() ([]actions.Action, error) {
+	return nil, nil
+	// return nil, errors.New("card must handle the call of discard function")
+}
+
 // Card interface
 type Card interface {
 	// String return the general infomation of the card
@@ -308,6 +252,115 @@ type Card interface {
 	Upgrade()
 	// Init the card by coping the base status to current status, then give the card a new UUID
 	Init() error
+	// Play the card and return the card actions
+	Play() ([]actions.Action, error)
+	// Exaust the card and return the card actions
+	Exaust() ([]actions.Action, error)
+	// Discard the card and return the card actions
+	Discard() ([]actions.Action, error)
+}
+
+// Pile of cards
+type Pile struct {
+	seed  int64
+	cards []Card
+}
+
+// AddToTop with the given card(s)
+func (p *Pile) AddToTop(c ...Card) {
+	p.cards = append(p.cards, c...)
+}
+
+// AddToBottom with the given card(s)
+func (p *Pile) AddToBottom(c ...Card) {
+	p.cards = append(c, p.cards...)
+}
+
+// Draw n card(s) to the target pile
+func (p *Pile) Draw(n int, target *Pile) error {
+	if n <= 0 {
+		return ErrDrawNumber
+	}
+	if n > len(p.cards) {
+		return ErrNotEnoughCards
+	}
+
+	idx := len(p.cards) - n
+
+	target.cards = append(target.cards, p.cards[idx:]...)
+	p.cards = p.cards[:idx]
+	return nil
+}
+
+// DrawCard draw one card by the given index to the target pile
+func (p *Pile) DrawCard(i int, target *Pile) error {
+	if i < 0 || i > len(p.cards)-1 {
+		return ErrDrawIndex
+	}
+
+	card, err := p.RemoveCard(i)
+	if err != nil {
+		return err
+	}
+	target.AddToTop(card)
+	return nil
+}
+
+// RemoveCard from the pile
+func (p *Pile) RemoveCard(i int) (Card, error) {
+	if i < 0 || i > len(p.cards)-1 {
+		return nil, ErrDrawIndex
+	}
+	card := p.cards[i]
+	copy(p.cards[i:], p.cards[i+1:])
+	p.cards = p.cards[:len(p.cards)-1]
+	return card, nil
+}
+
+// FindCardByID return the card index with given id
+func (p *Pile) FindCardByID(id string) int {
+	if p.CardsNum() == 0 {
+		return -1
+	}
+
+	for i, c := range p.cards {
+		if c.ID() == id {
+			return i
+		}
+	}
+
+	return -1
+}
+
+// Shuffle the pile
+func (p *Pile) Shuffle() {
+	if p.CardsNum() <= 0 {
+		return
+	}
+
+	rand.Seed(p.seed)
+	rand.Shuffle(len(p.cards), func(i, j int) { p.cards[i], p.cards[j] = p.cards[j], p.cards[i] })
+}
+
+// CardsNum - get the card number of the pile
+func (p *Pile) CardsNum() int {
+	return len(p.cards)
+}
+
+// CreateCardByName - create the card by the given name
+func (p *Pile) CreateCardByName(cardSet []string) error {
+	for _, s := range cardSet {
+		if CreateCardFunc[s] == nil {
+			// clear all the items reference by setting the slice to nil
+			// see: https://stackoverflow.com/questions/16971741/how-do-you-clear-a-slice-in-go
+			p.cards = nil
+			return fmt.Errorf("create function for card [%s] not found", s)
+		}
+
+		card := CreateCardFunc[s]()
+		p.AddToTop(card)
+	}
+	return nil
 }
 
 // CreateCardFunc map for generating cards

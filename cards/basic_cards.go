@@ -1,21 +1,25 @@
 package cards
 
+import (
+	"github.com/sleep2death/hexcore/actions"
+)
+
 // CardStrike is a Basic card. The Ironclad begins a run with 5 copies of Strike in the deck.
 type CardStrike struct {
 	*CardBase
 }
 
+// Play the strike card
+func (c *CardStrike) Play() (actions []actions.Action, err error) {
+	return nil, nil
+}
+
 // CreateCardStrike -
 func CreateCardStrike() (card Card) {
-	actions := &Actions{
-		Play:   []Action{DealDamage},
-		Select: []Action{SelectEnemy},
-	}
-
 	card = &CardStrike{
 		CardBase: &CardBase{
 			info:    &info{"strike", Attack, Red, Basic},
-			base:    &Status{Damage: 6, Target: Enemy, Cost: 1, Actions: actions},
+			base:    &Status{Damage: 6, Target: Enemy, Cost: 1},
 			upgrade: &Status{Damage: 3},
 		},
 	}
@@ -30,14 +34,10 @@ type CardDefend struct {
 
 // CreateCardDefend -
 func CreateCardDefend() (card Card) {
-	actions := &Actions{
-		Select: []Action{SelectSelf},
-		Play:   []Action{GainBlock},
-	}
-	card = &CardBash{
+	card = &CardDefend{
 		CardBase: &CardBase{
 			info:    &info{"defend", Skill, Red, Basic},
-			base:    &Status{Block: 8, Target: Enemy, Cost: 2, Actions: actions},
+			base:    &Status{Block: 5, Target: Enemy, Cost: 2},
 			upgrade: &Status{Block: 3},
 		},
 	}
@@ -53,14 +53,10 @@ type CardBash struct {
 
 // CreateCardBash -
 func CreateCardBash() (card Card) {
-	actions := &Actions{
-		Select: []Action{SelectEnemy},
-		Play:   []Action{Vulnerable},
-	}
 	card = &CardBash{
 		CardBase: &CardBase{
 			info:    &info{"bash", Attack, Red, Basic},
-			base:    &Status{Damage: 8, Target: Enemy, Cost: 2, Actions: actions},
+			base:    &Status{Damage: 8, Target: Enemy, Cost: 2},
 			upgrade: &Status{Damage: 2},
 		},
 	}
