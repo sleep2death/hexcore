@@ -114,9 +114,7 @@ func TestCardCopy(t *testing.T) {
 
 func TestManager(t *testing.T) {
 
-	m := &Manager{}
-
-	err := m.Create([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
+	m, err := CreateManager([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
 
 	if err != nil {
 		t.Error(err)
@@ -126,15 +124,14 @@ func TestManager(t *testing.T) {
 
 	// if a card name not exist, then return an error, and clear the pile
 
-	err = m.Create([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "ABC", "Defend", "Bash"})
+	m, err = CreateManager([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "ABC", "Defend", "Bash"})
 
 	assert.EqualError(t, err, "create function for card [ABC] not found")
 
-	assert.Equal(t, 0, len(m.deck.cards))
-
+	// assert.Equal(t, 0, len(m.deck.cards))
 	// create the deck
 
-	err = m.Create([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
+	m, err = CreateManager([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
 
 	if err != nil {
 		t.Error(err)
@@ -182,7 +179,7 @@ func TestManager(t *testing.T) {
 	assert.Equal(t, m.discard.cards[0], dCard)
 
 	// create the deck
-	err = m.Create([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
+	m, err = CreateManager([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
 	if err != nil {
 		t.Error(err)
 	}

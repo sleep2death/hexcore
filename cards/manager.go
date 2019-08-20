@@ -3,6 +3,7 @@ package cards
 import (
 	"errors"
 	"fmt"
+	"sync"
 )
 
 var seed int64 = 9012
@@ -29,18 +30,25 @@ type Manager struct {
 	hand    *Pile
 	discard *Pile
 	exaust  *Pile
+
+	mux sync.Mutex
 }
 
-// Create the card manager by filling the deck with given cards
-func (m *Manager) Create(cardSet []string) error {
+// CreateManager the card manager by filling the deck with given cards
+func CreateManager(cardSet []string) (*Manager, error) {
 	cap := len(cardSet)
 	dCap := cap * 4
-	m.deck = &Pile{seed: seed, cards: make([]Card, 0, cap)}
-	m.draw = &Pile{seed: seed, cards: make([]Card, 0, dCap)}
-	m.hand = &Pile{seed: seed, cards: make([]Card, 0, dCap)}
-	m.discard = &Pile{seed: seed, cards: make([]Card, 0, dCap)}
-	m.exaust = &Pile{seed: seed, cards: make([]Card, 0, dCap)}
-	return m.deck.CreateCardByName(cardSet)
+	m := &Manager{
+		deck:    &Pile{seed: seed, cards: make([]Card, 0, cap)},
+		draw:    &Pile{seed: seed, cards: make([]Card, 0, dCap)},
+		hand:    &Pile{seed: seed, cards: make([]Card, 0, dCap)},
+		discard: &Pile{seed: seed, cards: make([]Card, 0, dCap)},
+		exaust:  &Pile{seed: seed, cards: make([]Card, 0, dCap)},
+	}
+	if err := m.deck.CreateCardByName(cardSet); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (m *Manager) String() string {
@@ -49,6 +57,9 @@ func (m *Manager) String() string {
 
 // Shuffle - copy all cards from the deck pile to draw pile
 func (m *Manager) Shuffle() error {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+
 	if m.deck == nil || m.deck.CardsNum() <= 0 {
 		return ErrPileIsNil
 	}
@@ -68,18 +79,27 @@ func (m *Manager) Shuffle() error {
 
 // ReShuffle all cards in the discard pile, then draw all the cards into draw pile
 func (m *Manager) ReShuffle() error {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+
 	m.discard.Shuffle()
 	return m.discard.Draw(m.discard.CardsNum(), m.draw)
 }
 
 // Draw n cards from draw pile into hand pile
 func (m *Manager) Draw(n int) error {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+
 	// TODO: hand pile may have some cards number limit
 	return m.draw.Draw(n, m.hand)
 }
 
 // Exaust cards from hand pile to exaust pile
 func (m *Manager) Exaust(card Card) error {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+
 	idx := m.hand.FindCardByID(card.ID())
 	if idx < 0 {
 		return ErrCardNotExist
@@ -91,10 +111,16 @@ func (m *Manager) Exaust(card Card) error {
 
 // ExaustAll cards from hand
 func (m *Manager) ExaustAll() error {
+	m.mux.Lock()
+	defer m.mux.Unlock()
 	// should exaust the card one by one
 	// some cards will trigger actions when exausted
 	for m.hand.CardsNum() > 0 {
-		if err := m.Exaust(m.hand.cards[0]); err != nil {
+		idx := m.hand.FindCardByID(m.hand.cards[0].ID())
+		if idx < 0 {
+			return ErrCardNotExist
+		}
+		if err := m.hand.DrawCard(idx, m.exaust); err != nil {
 			return err
 		}
 	}
@@ -104,6 +130,9 @@ func (m *Manager) ExaustAll() error {
 
 // Discard cards from hand pile to discard pile
 func (m *Manager) Discard(card Card) error {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+
 	idx := m.hand.FindCardByID(card.ID())
 	if idx < 0 {
 		return ErrCardNotExist
@@ -115,10 +144,16 @@ func (m *Manager) Discard(card Card) error {
 
 // DiscardAll cards from hand
 func (m *Manager) DiscardAll() error {
+	m.mux.Lock()
+	defer m.mux.Unlock()
 	// should discard the card one by one
 	// some cards will trigger actions when discarded
 	for m.hand.CardsNum() > 0 {
-		if err := m.Discard(m.hand.cards[0]); err != nil {
+		idx := m.hand.FindCardByID(m.hand.cards[0].ID())
+		if idx < 0 {
+			return ErrCardNotExist
+		}
+		if err := m.hand.DrawCard(idx, m.discard); err != nil {
 			return err
 		}
 	}
