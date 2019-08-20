@@ -8,10 +8,6 @@
 		}
 	],
 	"settings": {
-    "editor.fontFamily": "Fira Code Retina",
-    "editor.fontSize": 13,
-    "editor.fontLigatures": true,
-
     "go.useLanguageServer": true,
 		"go.testFlags": [
 			"-v"
