@@ -1,17 +1,8 @@
 package cards
 
-import (
-	"github.com/sleep2death/hexcore/actions"
-)
-
 // CardStrike is a Basic card. The Ironclad begins a run with 5 copies of Strike in the deck.
 type CardStrike struct {
 	*CardBase
-}
-
-// Play the strike card
-func (c *CardStrike) Play() (actions []actions.Action, err error) {
-	return nil, nil
 }
 
 // CreateCardStrike -

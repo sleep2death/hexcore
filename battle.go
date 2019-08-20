@@ -5,11 +5,11 @@ import (
 	// "github.com/sleep2death/hexcore/actors"
 
 	"errors"
-	"fmt"
+	"log"
+	"sync/atomic"
 	"time"
 
 	"github.com/sleep2death/hexcore/actions"
-	"github.com/sleep2death/hexcore/actors"
 	"github.com/sleep2death/hexcore/cards"
 )
 
@@ -21,47 +21,67 @@ var InputTimeout = time.Second * 10
 // ErrInputTimeout -
 var ErrInputTimeout = errors.New("user input timeout")
 
+// ErrInputInvalid -
+var ErrInputInvalid = errors.New("user input invalid")
+
+// State is the type of battle state
+const (
+	// WaitForNone is the state of rejecting user input
+	WaitForNone int32 = iota
+	// WaitForPlay is the state of waiting user to select a card
+	WaitForCardPlay
+	// WaitForSelect is the state of waiting user to select a target
+	WaitForCardSelect
+)
+
 // Battle holds all card piles
 type Battle struct {
-	cards *cards.Manager
+	cards      *cards.Manager
+	inputState int32
 
-	dispatcher chan actions.Action
-
-	selectTarget chan string
-	selectCards  chan []string
+	actions   chan []actions.Action
+	err       chan error
+	CardInput chan string
 }
 
 // CreateBattle Manager
-func CreateBattle(cards *cards.Manager) *Battle {
+func CreateBattle(manager *cards.Manager) *Battle {
 	b := &Battle{
-		cards: cards,
-
-		dispatcher:   make(chan actions.Action),
-		selectTarget: make(chan string),
-		selectCards:  make(chan []string),
+		cards:      manager,
+		inputState: WaitForNone,
 	}
 
+	b.CardInput = make(chan string, 1)
+	b.err = make(chan error, 1)
 	// cards.SetActionDispacher(b.dispatcher)
-
 	return b
 }
 
-// WaitForTarget -
-func (b *Battle) WaitForTarget() (c actors.Actor, err error) {
-	select {
-	case target := <-b.selectTarget:
-		fmt.Printf("target is %s", target)
-	case <-time.After(InputTimeout):
-	}
-	return c, ErrInputTimeout
+// InputState of the battle
+func (b *Battle) InputState() int32 {
+	return atomic.LoadInt32(&(b.inputState))
 }
 
-// WaitForCards -
-func (b *Battle) WaitForCards() (cards []cards.Card, err error) {
-	select {
-	case target := <-b.selectCards:
-		fmt.Printf("target is %s", target)
-	case <-time.After(time.Second * 5):
+// SetInputState -
+func (b *Battle) SetInputState(state int32) {
+	atomic.StoreInt32(&(b.inputState), state)
+}
+
+// Update the battle loop
+func (b *Battle) Update() error {
+	for {
+		select {
+		case id := <-b.CardInput:
+			switch b.InputState() {
+			case WaitForCardPlay:
+				card := b.cards.GetCardByID(id, cards.Hand)
+				log.Printf("playing card <%v>", card)
+			case WaitForCardSelect:
+				log.Printf("selecting card <%s>", id)
+			}
+		case err := <-b.err:
+			log.Printf("error fired: <%v>", err)
+		default:
+		}
 	}
-	return cards, ErrInputTimeout
 }

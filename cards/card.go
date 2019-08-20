@@ -1,12 +1,10 @@
 package cards
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 
 	"github.com/lithammer/shortuuid"
-	"github.com/sleep2death/hexcore/actions"
 )
 
 // Color defines the color of the card
@@ -194,7 +192,7 @@ func (card *CardBase) Init() error {
 
 // Info return the basic information of the card
 func (card *CardBase) String() string {
-	return fmt.Sprintf("[%s]", card.info.ID)
+	return fmt.Sprintf("[%s - %s]", card.info.ID, card.id)
 }
 
 // ID return the uuid of the card
@@ -217,23 +215,6 @@ func (card *CardBase) Upgrade() {
 	card.base = card.base.Upgrade(card.upgrade)
 }
 
-// Play must be handled in the real card
-func (card *CardBase) Play() ([]actions.Action, error) {
-	return nil, errors.New("card must handle the call of play function")
-}
-
-// Exaust must be handled in the real card
-func (card *CardBase) Exaust() ([]actions.Action, error) {
-	return nil, nil
-	// return nil, errors.New("card must handle the call of exaust function")
-}
-
-// Discard must be handled in the real card
-func (card *CardBase) Discard() ([]actions.Action, error) {
-	return nil, nil
-	// return nil, errors.New("card must handle the call of discard function")
-}
-
 // Card interface
 type Card interface {
 	// String return the general infomation of the card
@@ -252,12 +233,6 @@ type Card interface {
 	Upgrade()
 	// Init the card by coping the base status to current status, then give the card a new UUID
 	Init() error
-	// Play the card and return the card actions
-	Play() ([]actions.Action, error)
-	// Exaust the card and return the card actions
-	Exaust() ([]actions.Action, error)
-	// Discard the card and return the card actions
-	Discard() ([]actions.Action, error)
 }
 
 // Pile of cards

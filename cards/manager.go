@@ -9,19 +9,35 @@ import (
 var seed int64 = 9012
 
 // ErrDrawNumber -
-var ErrDrawNumber error = errors.New("draw number should be larger than 0")
+var ErrDrawNumber = errors.New("draw number should be larger than 0")
 
 // ErrDrawIndex -
-var ErrDrawIndex error = errors.New("draw index should be larger than 0 and less than len(cards) - 1")
+var ErrDrawIndex = errors.New("draw index should be larger than 0 and less than len(cards) - 1")
 
 // ErrNotEnoughCards -
-var ErrNotEnoughCards error = errors.New("not enough card(s) to draw")
+var ErrNotEnoughCards = errors.New("not enough card(s) to draw")
 
 // ErrCardNotExist -
-var ErrCardNotExist error = errors.New("card doesn't exist in the pile")
+var ErrCardNotExist = errors.New("card doesn't exist in the pile")
 
 // ErrPileIsNil -
-var ErrPileIsNil error = errors.New("target pile is nil")
+var ErrPileIsNil = errors.New("target pile is nil")
+
+// CardPile type
+type CardPile uint
+
+const (
+	// Deck Pile -
+	Deck CardPile = iota
+	// Draw -
+	Draw
+	// Hand -
+	Hand
+	// Discard -
+	Discard
+	// Exaust -
+	Exaust
+)
 
 // Manager of all the cards in player's pocket
 type Manager struct {
@@ -156,6 +172,59 @@ func (m *Manager) DiscardAll() error {
 		if err := m.hand.DrawCard(idx, m.discard); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// GetCardByID -
+func (m *Manager) GetCardByID(id string, pile CardPile) Card {
+	var p *Pile
+	switch pile {
+	case Deck:
+		p = m.deck
+	case Draw:
+		p = m.draw
+	case Hand:
+		p = m.hand
+	case Discard:
+		p = m.discard
+	case Exaust:
+		p = m.exaust
+	default:
+		return nil
+	}
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	if idx := p.FindCardByID(id); idx >= 0 {
+		return p.cards[idx]
+	}
+
+	return nil
+}
+
+// GetCardByIndex -
+func (m *Manager) GetCardByIndex(idx int, pile CardPile) Card {
+	var p *Pile
+	switch pile {
+	case Deck:
+		p = m.deck
+	case Draw:
+		p = m.draw
+	case Hand:
+		p = m.hand
+	case Discard:
+		p = m.discard
+	case Exaust:
+		p = m.exaust
+	default:
+		return nil
+	}
+	m.mux.Lock()
+	defer m.mux.Unlock()
+
+	if idx >= 0 && idx < len(p.cards)-1 {
+		return p.cards[idx]
 	}
 
 	return nil
