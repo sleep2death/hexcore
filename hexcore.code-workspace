@@ -23,6 +23,17 @@
 				]
 			}
 		],
+		"vim.visualModeKeyBindings": [
+			{
+				"before": [
+					"z",
+					"z"
+				],
+				"after": [
+					"<Esc>"
+				]
+			}
+		],
 		"vim.normalModeKeyBindingsNonRecursive": [
 			{
 				"before": [
