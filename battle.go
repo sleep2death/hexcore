@@ -6,14 +6,12 @@ import (
 
 	"errors"
 	"log"
-	"sync/atomic"
+	"math/rand"
 	"time"
 
 	"github.com/sleep2death/hexcore/actions"
 	"github.com/sleep2death/hexcore/cards"
 )
-
-var seed int64 = 9012
 
 // InputTimeout -
 var InputTimeout = time.Second * 10
@@ -24,64 +22,81 @@ var ErrInputTimeout = errors.New("user input timeout")
 // ErrInputInvalid -
 var ErrInputInvalid = errors.New("user input invalid")
 
-// State is the type of battle state
+// ErrCardNotFound -
+var ErrCardNotFound = errors.New("user input card not found")
+
+// PileType -
+type PileType int
+
 const (
-	// WaitForNone is the state of rejecting user input
-	WaitForNone int32 = iota
-	// WaitForPlay is the state of waiting user to select a card
-	WaitForCardPlay
-	// WaitForSelect is the state of waiting user to select a target
-	WaitForCardSelect
+	// DeckPile -
+	DeckPile PileType = iota
+	// DrawPile -
+	DrawPile
+	// HandPile -
+	HandPile
+	// DiscardPile -
+	DiscardPile
+	// ExaustPile -
+	ExaustPile
 )
 
 // Battle holds all card piles
 type Battle struct {
-	cards      *cards.Manager
-	inputState int32
+	seed  *rand.Rand
+	cards []*cards.Pile
 
-	actions   chan []actions.Action
-	err       chan error
-	CardInput chan string
+	input  chan string // user input channel
+	errorc chan error  // error channel
 }
 
-// CreateBattle Manager
-func CreateBattle(manager *cards.Manager) *Battle {
-	b := &Battle{
-		cards:      manager,
-		inputState: WaitForNone,
+// Exec the action
+func (b *Battle) Exec(actions []actions.Action) []actions.Action {
+	if actions == nil || len(actions) == 0 {
+		return nil
 	}
 
-	b.CardInput = make(chan string, 1)
-	b.err = make(chan error, 1)
-	// cards.SetActionDispacher(b.dispatcher)
-	return b
+	for _, a := range actions {
+		if a != nil {
+			as := a.Exec(b.errorc)
+			b.Exec(as)
+		}
+	}
+
+	return nil
 }
 
-// InputState of the battle
-func (b *Battle) InputState() int32 {
-	return atomic.LoadInt32(&(b.inputState))
-}
-
-// SetInputState -
-func (b *Battle) SetInputState(state int32) {
-	atomic.StoreInt32(&(b.inputState), state)
-}
-
-// Update the battle loop
+// Update the battle
 func (b *Battle) Update() error {
 	for {
 		select {
-		case id := <-b.CardInput:
-			switch b.InputState() {
-			case WaitForCardPlay:
-				card := b.cards.GetCardByID(id, cards.Hand)
-				log.Printf("playing card <%v>", card)
-			case WaitForCardSelect:
-				log.Printf("selecting card <%s>", id)
-			}
-		case err := <-b.err:
-			log.Printf("error fired: <%v>", err)
+		case err := <-b.errorc:
+			log.Printf("action error received: %v", err)
+			return err
 		default:
 		}
 	}
+}
+
+// CreateBattle with given seed and deck pile
+func CreateBattle(deck *cards.Pile) (b *Battle) {
+
+	draw, _ := cards.CreatePile(deck.Seed, nil)
+	hand, _ := cards.CreatePile(deck.Seed, nil)
+	discard, _ := cards.CreatePile(deck.Seed, nil)
+	exaust, _ := cards.CreatePile(deck.Seed, nil)
+
+	b = &Battle{
+		seed: deck.Seed,
+		cards: []*cards.Pile{
+			deck,
+			draw,
+			hand,
+			discard,
+			exaust,
+		},
+		input:  make(chan string),
+		errorc: make(chan error),
+	}
+	return
 }

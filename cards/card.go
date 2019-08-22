@@ -1,31 +1,30 @@
 package cards
 
 import (
-	"fmt"
+	"errors"
 	"math/rand"
+	"strings"
+	"sync"
 
 	"github.com/lithammer/shortuuid"
 )
 
-// Color defines the color of the card
-type Color uint
+var (
+	// ErrDrawNumber -
+	ErrDrawNumber = errors.New("draw number should be larger than 0")
 
-const (
-	// Red is for warrior cards
-	Red Color = iota
-	// Green is for roger cards
-	Green
-	// Blue is for wizard cards
-	Blue
-	// ColorLess is for  neutral cards (grey)
-	ColorLess
-	// CurseC is for curse cards (also grey)
-	CurseC
+	// ErrDrawIndex -
+	ErrDrawIndex = errors.New("draw index should be larger than 0 and less than len(cards) - 1")
+
+	// ErrNotEnoughCards -
+	ErrNotEnoughCards = errors.New("not enough card(s) to draw")
+
+	// ErrCardNotExist -
+	ErrCardNotExist = errors.New("card doesn't exist")
+
+	// ErrPileIsNilOrEmpty -
+	ErrPileIsNilOrEmpty = errors.New("target pile is nil or empty")
 )
-
-func (c Color) String() string {
-	return [...]string{"red", "green", "blue", "colorless", "curse"}[c]
-}
 
 // Target is the target type of the card
 type Target uint
@@ -47,33 +46,6 @@ const (
 
 func (c Target) String() string {
 	return [...]string{"nil", "enemy", "allEnemy", "self", "none", "selfAndEnemy", "all"}[c]
-}
-
-// Rarity is the rarity of the card
-type Rarity uint
-
-const (
-	// Basic rarity
-	// Basic cards are the default cards from the starting deck for your class. They have the same grey banner as Commons, though certain events treat them as a lower tier when offered or transformed.
-	Basic Rarity = iota
-	// Special rarity
-	// Special cards cannot be obtained through normal card-drops.
-	Special
-	// Common rarity
-	// Common cards have a grey banner
-	Common
-	// Uncommon rarity
-	// Uncommon cards have a blue banner
-	Uncommon
-	// Rare rarity
-	// Rare cards have a yellow/gold banne
-	Rare
-	// CurseR rarity
-	CurseR
-)
-
-func (c Rarity) String() string {
-	return [...]string{"basic", "special", "common", "uncommon", "rare", "curse"}[c]
 }
 
 // CType is the type of the card
@@ -99,13 +71,6 @@ const (
 
 func (c CType) String() string {
 	return [...]string{"attack", "skill", "power", "status", "curse"}[c]
-}
-
-type info struct {
-	ID     string
-	CType  CType
-	Color  Color
-	Rarity Rarity
 }
 
 // Status hold all changeable attributes of the card
@@ -145,144 +110,195 @@ func (n *Status) Upgrade(u *Status) (s *Status) {
 	return
 }
 
-// CardBase -
-type CardBase struct {
-	*info
-	id      string
+// Card -
+type Card struct {
+	id    string
+	name  string
+	ctype CType
+
 	base    *Status
 	upgrade *Status
 	current *Status
 }
 
 // Copy the card
-func (card *CardBase) Copy() Card {
-	c := &CardBase{
+func (card *Card) Copy() *Card {
+	return &Card{
 		// generate a new uuid for the card
 		id: shortuuid.New(),
-		// card info will never be modified after created, so use a pointer is fine
-		info: card.info,
-		// card upgrade status will never be modified after created, so use a pointer is fine
-		// when upgrade a card, use the base status add the upgrade status, then return the new upgraded status
-		upgrade: card.upgrade,
+		// card name
+		name: card.name,
+		// card type
+		ctype: card.ctype,
 		// some cards may change the base status permantly in the battle
 		// like card [Ritual Dagger] -  if this card kills an enemy then permanently increase this card's damage by 3(5)
 		// if card["feed"] upgraded in the battle, then original card in the deck will also be upgraded
-		// manager can use "base" status permanently change the card
+		// battle manager can use "base" status permanently change the card
 		base: card.base,
+		// card upgrade status will never be modified after created, so use a pointer is fine
+		// when upgrade a card, use the base status add the upgrade status, then return the new upgraded status
+		upgrade: card.upgrade,
 		// card current status in battle
+		current: card.base.Copy(),
 	}
-
-	if card.current != nil {
-		c.current = card.current.Copy()
-	}
-
-	return c
 }
 
-// Init the card by copying the base status to current
-func (card *CardBase) Init() error {
-	if len(card.id) > 0 || card.current != nil {
-		return fmt.Errorf("card %v has been initialized already", card)
-	}
-	card.id = shortuuid.New()       //generate a new uuid for the card
-	card.current = card.base.Copy() // copy the base status to the current status
-
-	return nil
+func (card *Card) String() string {
+	return card.name
 }
 
-// Info return the basic information of the card
-func (card *CardBase) String() string {
-	return fmt.Sprintf("[%s - %s]", card.info.ID, card.id)
+// Name of the card
+func (card *Card) Name() string {
+	return card.name
 }
 
 // ID return the uuid of the card
-func (card *CardBase) ID() string {
+func (card *Card) ID() string {
 	return card.id
 }
 
-// Base return the base numbers of the card
-func (card *CardBase) Base() *Status {
+// CType return the type of the card
+func (card *Card) CType() CType {
+	return card.ctype
+}
+
+// Base return the base status of the card
+func (card *Card) Base() *Status {
 	return card.base
 }
 
-// Current return the current numbers of the card
-func (card *CardBase) Current() *Status {
+// Upgrade return the upgrade of the card
+func (card *Card) Upgrade() *Status {
+	return card.upgrade
+}
+
+// UpgradeBase - upgrade card base status, also tit will upgrade the current status
+func (card *Card) UpgradeBase() {
+	card.base = card.base.Upgrade(card.upgrade)
+	card.current = card.current.Upgrade(card.upgrade)
+}
+
+// UpgradeCurrent - upgrade card current status
+func (card *Card) UpgradeCurrent() {
+	card.current = card.current.Upgrade(card.upgrade)
+}
+
+// Current return the current status of the card
+func (card *Card) Current() *Status {
 	return card.current
 }
 
-// Upgrade the card
-func (card *CardBase) Upgrade() {
-	card.base = card.base.Upgrade(card.upgrade)
-}
-
-// Card interface
-type Card interface {
-	// String return the general infomation of the card
-	String() string
-	// ID return the uuid of the card
-	ID() string
-
-	// Base return the base status of the card
-	Base() *Status
-	// Current return the current status of the card
-	Current() *Status
-
-	// Copy the card and return a new one
-	Copy() Card
-	// Upgrade the card by adding the upgrade status to the base status
-	Upgrade()
-	// Init the card by coping the base status to current status, then give the card a new UUID
-	Init() error
+// CreateCard -
+func CreateCard(name string, ctype CType, base *Status, upgrade *Status) *Card {
+	return &Card{
+		// generate a new uuid for the card
+		id: shortuuid.New(),
+		// card name
+		name: name,
+		// card type
+		ctype: ctype,
+		// some cards may change the base status permantly in the battle
+		// like card [Ritual Dagger] -  if this card kills an enemy then permanently increase this card's damage by 3(5)
+		// if card["feed"] upgraded in the battle, then original card in the deck will also be upgraded
+		// battle manager can use "base" status permanently change the card
+		base: base,
+		// card upgrade status will never be modified after created, so use a pointer is fine
+		// when upgrade a card, use the base status add the upgrade status, then return the new upgraded status
+		upgrade: upgrade,
+		// card current status in battle
+		current: base.Copy(),
+	}
 }
 
 // Pile of cards
 type Pile struct {
-	seed  int64
-	cards []Card
+	// Random seed of the pile
+	Seed  *rand.Rand
+	cards []*Card
+	// Lock
+	mux *sync.Mutex
+}
+
+// String -
+func (p *Pile) String() string {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
+	s := ""
+	for _, card := range p.cards {
+		s += card.String() + " "
+	}
+
+	return "[" + strings.TrimSpace(s) + "]"
+}
+
+// Num - get the card number of the pile
+func (p *Pile) Num() int {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+	// l := len(p.cards)
+	return len(p.cards)
+}
+
+// Clear the pile
+func (p *Pile) Clear() {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
+	p.cards = nil
 }
 
 // AddToTop with the given card(s)
-func (p *Pile) AddToTop(c ...Card) {
+func (p *Pile) AddToTop(c ...*Card) {
+	p.mux.Lock()
+	defer p.mux.Unlock()
 	p.cards = append(p.cards, c...)
 }
 
 // AddToBottom with the given card(s)
-func (p *Pile) AddToBottom(c ...Card) {
+func (p *Pile) AddToBottom(c ...*Card) {
+	p.mux.Lock()
+	defer p.mux.Unlock()
 	p.cards = append(c, p.cards...)
 }
 
-// Draw n card(s) to the target pile
-func (p *Pile) Draw(n int, target *Pile) error {
+// Draw n card(s) from the source pile
+func (p *Pile) Draw(source *Pile, n int) error {
 	if n <= 0 {
 		return ErrDrawNumber
 	}
-	if n > len(p.cards) {
+	if n > source.Num() {
 		return ErrNotEnoughCards
 	}
 
-	idx := len(p.cards) - n
+	p.mux.Lock()
+	idx := len(source.cards) - n
+	p.cards = append(p.cards, source.cards[idx:]...)
+	p.mux.Unlock()
 
-	target.cards = append(target.cards, p.cards[idx:]...)
-	p.cards = p.cards[:idx]
+	source.mux.Lock()
+	source.cards = source.cards[:idx]
+	source.mux.Unlock()
 	return nil
 }
 
-// DrawCard draw one card by the given index to the target pile
-func (p *Pile) DrawCard(i int, target *Pile) error {
-	if i < 0 || i > len(p.cards)-1 {
-		return ErrDrawIndex
-	}
-
-	card, err := p.RemoveCard(i)
+// Pick one card from source pile and add it to the top of the pile
+func (p *Pile) Pick(source *Pile, id string) error {
+	card, idx, err := source.FindCard(id)
 	if err != nil {
 		return err
 	}
-	target.AddToTop(card)
+
+	p.AddToTop(card)
+	source.RemoveCard(idx)
 	return nil
 }
 
 // RemoveCard from the pile
-func (p *Pile) RemoveCard(i int) (Card, error) {
+func (p *Pile) RemoveCard(i int) (*Card, error) {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
 	if i < 0 || i > len(p.cards)-1 {
 		return nil, ErrDrawIndex
 	}
@@ -292,54 +308,85 @@ func (p *Pile) RemoveCard(i int) (Card, error) {
 	return card, nil
 }
 
-// FindCardByID return the card index with given id
-func (p *Pile) FindCardByID(id string) int {
-	if p.CardsNum() == 0 {
-		return -1
+// GetCard from the pile
+func (p *Pile) GetCard(i int) (*Card, error) {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+	if i < 0 || i > len(p.cards)-1 {
+		return nil, ErrDrawIndex
+	}
+	card := p.cards[i]
+	return card, nil
+}
+
+// FindCard return both the card and card index of the pile
+func (p *Pile) FindCard(id string) (card *Card, idx int, err error) {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+	if len(p.cards) == 0 {
+		return nil, -1, ErrPileIsNilOrEmpty
 	}
 
 	for i, c := range p.cards {
 		if c.ID() == id {
-			return i
+			return c, i, nil
 		}
 	}
 
-	return -1
+	return nil, -1, ErrCardNotExist
 }
 
 // Shuffle the pile
 func (p *Pile) Shuffle() {
-	if p.CardsNum() <= 0 {
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
+	if len(p.cards) == 0 {
 		return
 	}
 
-	rand.Seed(p.seed)
-	rand.Shuffle(len(p.cards), func(i, j int) { p.cards[i], p.cards[j] = p.cards[j], p.cards[i] })
+	p.Seed.Shuffle(len(p.cards), func(i, j int) { p.cards[i], p.cards[j] = p.cards[j], p.cards[i] })
 }
 
-// CardsNum - get the card number of the pile
-func (p *Pile) CardsNum() int {
-	return len(p.cards)
+// CopyCardsFrom -
+func (p *Pile) CopyCardsFrom(source *Pile) error {
+	if source == nil || source.Num() == 0 {
+		return ErrPileIsNilOrEmpty
+	}
+
+	source.mux.Lock()
+	for _, card := range source.cards {
+		p.AddToTop(card.Copy())
+	}
+	source.mux.Unlock()
+
+	return nil
 }
 
-// CreateCardByName - create the card by the given name
-func (p *Pile) CreateCardByName(cardSet []string) error {
+// CreatePile by given seed and cardset
+func CreatePile(seed *rand.Rand, cardSet []string) (p *Pile, err error) {
+	p = &Pile{Seed: seed, mux: &sync.Mutex{}}
+
+	if cardSet == nil || len(cardSet) == 0 {
+		return p, nil
+	}
+
 	for _, s := range cardSet {
 		if CreateCardFunc[s] == nil {
 			// clear all the items reference by setting the slice to nil
 			// see: https://stackoverflow.com/questions/16971741/how-do-you-clear-a-slice-in-go
 			p.cards = nil
-			return fmt.Errorf("create function for card [%s] not found", s)
+			return nil, ErrCardNotExist
 		}
 
 		card := CreateCardFunc[s]()
 		p.AddToTop(card)
 	}
-	return nil
+	return
 }
 
 // CreateCardFunc map for generating cards
-var CreateCardFunc = map[string](func() Card){
+var CreateCardFunc = map[string](func() *Card){
 	"Strike": CreateCardStrike,
 	"Bash":   CreateCardBash,
 	"Defend": CreateCardDefend,
