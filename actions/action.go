@@ -1,33 +1,29 @@
 package actions
 
 import (
+	"errors"
 	"log"
+	"sync/atomic"
 	"time"
 
 	"github.com/sleep2death/hexcore/cards"
 )
 
-// Execute the actions
-func Execute(actions []Action, output chan<- Action, errorc chan<- error) []Action {
-	if actions == nil || len(actions) == 0 {
-		return nil
-	}
-	for _, a := range actions {
-		if a != nil {
-			as := a.Exec(output, errorc)
-			Execute(as, output, errorc)
-		}
-	}
-
-	return nil
-}
+var (
+	// ErrActionListIsEmpty -
+	ErrActionListIsEmpty = errors.New("action list is empty or nil")
+	// ErrWaitingForUserInput -
+	ErrWaitingForUserInput = errors.New("waiting for user input")
+	// ErrWaitingForUserInputTimeout -
+	ErrWaitingForUserInputTimeout = errors.New("waiting for user input timeout")
+)
 
 // Action -
 type Action interface {
 	// Exec - execute the action
 	// @output is the channel for sending actions back to client
 	// @errorc is the channel for taking care of errors in the action
-	Exec(output chan<- Action, errorc chan<- error) []Action
+	Exec() ([]Action, error)
 }
 
 // StartBattleAction - copy all cards for deck to draw, then shuffle draw
@@ -37,13 +33,12 @@ type StartBattleAction struct {
 }
 
 // Exec -
-func (a *StartBattleAction) Exec(output chan<- Action, errorc chan<- error) []Action {
+func (a *StartBattleAction) Exec() ([]Action, error) {
 	a.Draw.Clear()
 
 	err := a.Draw.CopyCardsFrom(a.Deck)
 	if err != nil {
-		errorc <- err
-		return nil
+		return nil, err
 	}
 
 	// TODO: sending the action back to client
@@ -53,7 +48,7 @@ func (a *StartBattleAction) Exec(output chan<- Action, errorc chan<- error) []Ac
 		&ShuffleAction{
 			Pile: a.Draw,
 		},
-	}
+	}, nil
 }
 
 // StartTurnAction - draw 5 cards from draw pile into hand
@@ -64,11 +59,10 @@ type StartTurnAction struct {
 }
 
 // Exec -
-func (a *StartTurnAction) Exec(output chan<- Action, errorc chan<- error) []Action {
+func (a *StartTurnAction) Exec() ([]Action, error) {
 	err := a.Hand.Draw(a.Draw, 5)
 	if err == cards.ErrDrawNumber {
-		errorc <- err
-		return nil
+		return nil, err
 	} else if err == cards.ErrNotEnoughCards && a.Discard.Num() > 0 {
 		// if draw pile in not enough,
 		// draw all the left cards of the draw pile into hand
@@ -89,30 +83,81 @@ func (a *StartTurnAction) Exec(output chan<- Action, errorc chan<- error) []Acti
 				DrawFrom: a.Draw,
 				N:        left,
 			},
-		}
+		}, nil
 
+		// bot discard and draw pile is empty
+	} else if err == cards.ErrNotEnoughCards {
+		return nil, err
 	}
 	// TODO: sending the action back to client
 	// by using the output channel
-	return nil
+	return nil, nil
 }
+
+const (
+	// WaitForAction state
+	WaitForAction int32 = iota
+	// WaitForPlay state
+	WaitForPlay
+	// WaitForDiscard state
+	WaitForDiscard
+	// WaitForExaust state
+	WaitForExaust
+)
 
 // WaitForPlayAction - wait for player input the card
 type WaitForPlayAction struct {
 	Hand  *cards.Pile
 	Input chan string
+	State *int32
+}
+
+// result -
+type result struct {
+	card *cards.Card
+	err  error
 }
 
 // Exec -
-func (a *WaitForPlayAction) Exec(output chan<- Action, erroc chan<- error) []Action {
-	select {
-	case id := <-a.Input:
-		log.Printf("Input Card ID: %s", id)
-		return nil
-	case <-time.After(time.Second * 5):
-		log.Print("TimeOut")
-		return nil
-	}
+func (a *WaitForPlayAction) Exec() ([]Action, error) {
+	atomic.StoreInt32(a.State, WaitForPlay)
+	output := make(chan *result)
+
+	go func() {
+		defer func() {
+			// close input channel, so you should make a new one next time
+			close(a.Input)
+		}()
+		select {
+		case id := <-a.Input:
+			card, _, err := a.Hand.FindCard(id)
+			output <- &result{
+				card: card,
+				err:  err,
+			}
+		case <-time.After(time.Second * 5):
+			output <- &result{
+				card: nil,
+				err:  ErrWaitingForUserInputTimeout,
+			}
+		}
+	}()
+
+	go func() {
+		defer close(output)
+		select {
+		case res := <-output:
+			if res.err != nil {
+				log.Print(res)
+			} else {
+				log.Print(res.card)
+			}
+		}
+		// reset the state to action state
+		atomic.StoreInt32(a.State, WaitForAction)
+	}()
+
+	return nil, nil
 }
 
 // DiscardAction -
@@ -123,11 +168,11 @@ type DiscardAction struct {
 }
 
 // Exec -
-func (a *DiscardAction) Exec(output chan<- Action, errorc chan<- error) []Action {
+func (a *DiscardAction) Exec() ([]Action, error) {
 	if err := a.Discard.Pick(a.Hand, a.ID); err != nil {
-		errorc <- err
+		return nil, err
 	}
-	return nil
+	return nil, nil
 }
 
 // DiscardAllAction -
@@ -137,11 +182,10 @@ type DiscardAllAction struct {
 }
 
 // Exec -
-func (a *DiscardAllAction) Exec(output chan<- Action, errorc chan<- error) []Action {
+func (a *DiscardAllAction) Exec() ([]Action, error) {
 	num := a.Hand.Num()
 	if num == 0 {
-		errorc <- cards.ErrNotEnoughCards
-		return nil
+		return nil, cards.ErrNotEnoughCards
 	}
 	discardBatch := make([]Action, num)
 	for i := 0; i < num; i++ {
@@ -152,7 +196,7 @@ func (a *DiscardAllAction) Exec(output chan<- Action, errorc chan<- error) []Act
 			ID:      card.ID(),
 		}
 	}
-	return discardBatch
+	return discardBatch, nil
 }
 
 // # Card & Pile Actions #
@@ -163,9 +207,9 @@ type ShuffleAction struct {
 }
 
 // Exec -
-func (a *ShuffleAction) Exec(output chan<- Action, errorc chan<- error) []Action {
+func (a *ShuffleAction) Exec() ([]Action, error) {
 	a.Pile.Shuffle()
-	return nil
+	return nil, nil
 }
 
 // DrawAction -
@@ -176,10 +220,10 @@ type DrawAction struct {
 }
 
 // Exec -
-func (a *DrawAction) Exec(output chan<- Action, errorc chan<- error) []Action {
+func (a *DrawAction) Exec() ([]Action, error) {
 	err := a.Pile.Draw(a.DrawFrom, a.N)
 	if err != nil {
-		errorc <- err
+		return nil, err
 	}
-	return nil
+	return nil, nil
 }
