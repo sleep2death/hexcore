@@ -1,25 +1,17 @@
 package actions
 
 import (
-	"errors"
 	"log"
 	"math/rand"
-	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/sleep2death/hexcore/cards"
 	"github.com/stretchr/testify/assert"
 )
 
-var state int32
-var input chan WaitForCardResult
-
 // Do the actions
 func Do(actions []Action) error {
-	if s := atomic.LoadInt32(&state); s > 0 {
-		return errors.New("wait for input")
-	}
-
 	if actions == nil || len(actions) == 0 {
 		return ErrActionListIsEmpty
 	}
@@ -32,25 +24,6 @@ func Do(actions []Action) error {
 	}
 
 	return nil
-}
-
-func Receive(done <-chan struct{}, input <-chan WaitForCardResult) <-chan error {
-	errc := make(chan error, 1)
-	var err error
-	go func() {
-		select {
-		case res := <-recv:
-			if res.Err != nil {
-				err = res.Err
-			} else {
-				log.Println("card result received", res)
-			}
-		case <-done:
-		}
-	}()
-	// No select needed here, since errc is buffered.
-	errc <- err
-	return errc
 }
 
 func TestStartBattleAction(t *testing.T) {
@@ -143,13 +116,89 @@ func TestStartBattleAction(t *testing.T) {
 		&WaitForPlayAction{
 			Hand:  hand,
 			Input: input,
-			State: &state,
 		},
 	})
-	assert.Equal(t, nil, err)
 	assert.Equal(t, 5, draw.Num())
 	assert.Equal(t, 5, hand.Num())
 	assert.Equal(t, 0, discard.Num())
 
 	// time.Sleep(time.Second * 6)
+}
+
+type AsyncAction interface {
+	Exec(errc chan<- error) []AsyncAction
+}
+
+func DoAsync(actions []AsyncAction, errc chan<- error) {
+	if actions == nil || len(actions) == 0 {
+		errc <- ErrActionListIsEmpty
+	}
+	for _, a := range actions {
+		as := a.Exec(errc)
+		if as != nil {
+			DoAsync(as, errc)
+		}
+	}
+}
+
+type WaitForInputAction struct {
+	Hand  *cards.Pile
+	Input chan string
+}
+
+func (a *WaitForInputAction) Exec(errc chan<- error) []AsyncAction {
+	select {
+	case id := <-a.Input:
+		card, _, err := a.Hand.FindCard(id)
+		if err != nil {
+			errc <- err
+			return nil
+		}
+		return []AsyncAction{
+			&PlayCardAction{
+				Card: card,
+			},
+		}
+	case <-time.After(time.Second * 3):
+		errc <- ErrInputTimeout
+		return nil
+	}
+}
+
+type PlayCardAction struct {
+	Card *cards.Card
+}
+
+func (a *PlayCardAction) Exec(errc chan<- error) []AsyncAction {
+	log.Printf("Play card -> %v", a.Card)
+	return nil
+}
+
+func TestAsyncAction(t *testing.T) {
+	var action AsyncAction
+
+	seed := rand.New(rand.NewSource(9012))
+	hand, _ := cards.CreatePile(seed, []string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
+	input := make(chan string)
+
+	action = &WaitForInputAction{
+		Hand:  hand,
+		Input: input,
+	}
+
+	errc := make(chan error)
+
+	// card, _ := hand.GetCard(0)
+	// cardID := card.ID()
+	go DoAsync([]AsyncAction{action}, errc)
+
+	time.Sleep(time.Second * 1)
+	input <- "ABC"
+	err := <-errc
+	t.Log(err.Error())
+
+	// errc = make(chan error)
+	// DoAsync(action, errc)
+	// err = <-errc
+	// assert.Equal(t, ErrInputTimeout, err)
 }

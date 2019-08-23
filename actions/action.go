@@ -2,8 +2,6 @@ package actions
 
 import (
 	"errors"
-	"log"
-	"sync/atomic"
 	"time"
 
 	"github.com/sleep2death/hexcore/cards"
@@ -14,8 +12,8 @@ var (
 	ErrActionListIsEmpty = errors.New("action list is empty or nil")
 	// ErrWaitingForUserInput -
 	ErrWaitingForUserInput = errors.New("waiting for user input")
-	// ErrWaitingForUserInputTimeout -
-	ErrWaitingForUserInputTimeout = errors.New("waiting for user input timeout")
+	// ErrInputTimeout -
+	ErrInputTimeout = errors.New("waiting for user input timeout")
 )
 
 // Action -
@@ -109,56 +107,32 @@ const (
 type WaitForPlayAction struct {
 	Hand  *cards.Pile
 	Input chan string
-	State *int32
-}
-
-// result -
-type result struct {
-	card *cards.Card
-	err  error
 }
 
 // Exec -
 func (a *WaitForPlayAction) Exec() ([]Action, error) {
-	atomic.StoreInt32(a.State, WaitForPlay)
-	output := make(chan *result)
-
-	go func() {
-		defer func() {
-			// close input channel, so you should make a new one next time
-			close(a.Input)
-		}()
-		select {
-		case id := <-a.Input:
-			card, _, err := a.Hand.FindCard(id)
-			output <- &result{
-				card: card,
-				err:  err,
-			}
-		case <-time.After(time.Second * 5):
-			output <- &result{
-				card: nil,
-				err:  ErrWaitingForUserInputTimeout,
-			}
+	select {
+	case id := <-a.Input:
+		_, _, err := a.Hand.FindCard(id)
+		if err != nil {
+			return nil, err
 		}
-	}()
-
-	go func() {
-		defer close(output)
-		select {
-		case res := <-output:
-			if res.err != nil {
-				log.Print(res)
-			} else {
-				log.Print(res.card)
-			}
-		}
-		// reset the state to action state
-		atomic.StoreInt32(a.State, WaitForAction)
-	}()
-
-	return nil, nil
+		return nil, nil
+	case <-time.After(time.Second * 5):
+		return nil, ErrInputTimeout
+	}
 }
+
+// PlayCardAction -
+// type PlayCardAction struct {
+// 	Card *cards.Card
+// }
+
+// // Exec -
+// func (a *PlayCardAction) Exec() ([]Action, error) {
+// 	log.Printf("Play card -> %v", a.Card)
+// 	return nil, nil
+// }
 
 // DiscardAction -
 type DiscardAction struct {
