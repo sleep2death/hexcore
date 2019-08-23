@@ -212,12 +212,21 @@ func CreateCard(name string, ctype CType, base *Status, upgrade *Status) *Card {
 
 // Pile of cards
 type Pile struct {
-	// Random seed of the pile
-	Seed  *rand.Rand
 	cards []*Card
 	// Lock
 	mux *sync.Mutex
 }
+
+const (
+	// Draw Pile
+	Draw = iota
+	// Hand Pile
+	Hand
+	// Discard Pile
+	Discard
+	// Exaust Pile
+	Exaust
+)
 
 // String -
 func (p *Pile) String() string {
@@ -337,7 +346,7 @@ func (p *Pile) FindCard(id string) (card *Card, idx int, err error) {
 }
 
 // Shuffle the pile
-func (p *Pile) Shuffle() {
+func (p *Pile) Shuffle(seed *rand.Rand) {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
@@ -345,7 +354,7 @@ func (p *Pile) Shuffle() {
 		return
 	}
 
-	p.Seed.Shuffle(len(p.cards), func(i, j int) { p.cards[i], p.cards[j] = p.cards[j], p.cards[i] })
+	seed.Shuffle(len(p.cards), func(i, j int) { p.cards[i], p.cards[j] = p.cards[j], p.cards[i] })
 }
 
 // CopyCardsFrom -
@@ -364,8 +373,8 @@ func (p *Pile) CopyCardsFrom(source *Pile) error {
 }
 
 // CreatePile by given seed and cardset
-func CreatePile(seed *rand.Rand, cardSet []string) (p *Pile, err error) {
-	p = &Pile{Seed: seed, mux: &sync.Mutex{}}
+func CreatePile(cardSet []string) (p *Pile, err error) {
+	p = &Pile{mux: &sync.Mutex{}}
 
 	if cardSet == nil || len(cardSet) == 0 {
 		return p, nil
