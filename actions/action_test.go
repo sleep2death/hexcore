@@ -1,65 +1,88 @@
 package actions
 
 import (
-	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/sleep2death/hexcore/cards"
 	"gopkg.in/go-playground/assert.v1"
 )
 
-func TestWaitForCard(t *testing.T) {
-	input := make(chan string)
-
-	hand, _ := cards.CreatePile([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
-
-	card, _ := hand.GetCard(0)
-	cardID := card.ID()
-
-	ctx := &Context{}
-	ctx.Cards = make([]*cards.Pile, 4)
-	ctx.Cards[cards.Hand] = hand
-	ctx.InputC = input
-
-	Execute(WaitForCard, ctx)
-	err := <-ctx.ErrC
-	assert.Equal(t, ErrInputTimeout, err)
-
-	Execute(WaitForCard, ctx)
-	input <- cardID
-
-	//errc should be closed
-	err = <-ctx.ErrC
-	assert.Equal(t, nil, err)
-
-	Execute(WaitForCard, ctx)
-	input <- "ABC"
-
-	//errc should be closed
-	err = <-ctx.ErrC
-	assert.Equal(t, cards.ErrCardNotExist, err)
-}
-
 func TestStartBattle(t *testing.T) {
-	// input := make(chan string)
+	piles := make([]*cards.Pile, 4)
+	ctx, err := NewContext(int64(9012), piles)
+	assert.Equal(t, ErrInitCards, err)
 
-	seed := rand.New(rand.NewSource(9012))
 	deck, _ := cards.CreatePile([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
 
-	ctx := &Context{}
+	piles = make([]*cards.Pile, 5)
+	piles[cards.Deck] = deck
 
-	Execute(StartBattle, ctx)
-	err := <-ctx.ErrC
-	assert.Equal(t, ErrSeedNotSet, err)
+	// input wrong card id
+	ctx, _ = NewContext(int64(9012), piles)
+	inputc, errc, _ := Execute(StartBattle, ctx)
+	// Must wait a moment, for turn start function return
+	time.Sleep(time.Millisecond * 10)
+	inputc <- &Input{CardID: "ABC"}
 
-	ctx.Seed = seed
-	Execute(StartBattle, ctx)
-	err = <-ctx.ErrC
-	assert.Equal(t, cards.ErrPileIsNilOrEmpty, err)
+	err = <-errc
+	assert.Equal(t, cards.ErrCardNotExist, err)
+	assert.Equal(t, "[Bash Defend Defend Strike Strike]", ctx.piles[cards.Draw].String())
+	assert.Equal(t, "[Strike Strike Defend Defend Strike]", ctx.piles[cards.Hand].String())
 
-	ctx.Deck = deck
-	Execute(StartBattle, ctx)
-	err = <-ctx.ErrC
-	assert.Equal(t, nil, err)
-	assert.Equal(t, "[Bash Defend Defend Strike Strike Strike Strike Defend Defend Strike]", ctx.Cards[cards.Draw].String())
+	// input timeout
+	ctx, _ = NewContext(int64(9012), piles)
+	_, errc, _ = Execute(StartBattle, ctx)
+	err = <-errc
+	assert.Equal(t, ErrInputTimeout, err)
+	assert.Equal(t, "[Bash Defend Defend Strike Strike]", ctx.piles[cards.Draw].String())
+	assert.Equal(t, "[Strike Strike Defend Defend Strike]", ctx.piles[cards.Hand].String())
+
+	// execute actions in the loop
+	errc = nil
+	for {
+		// wait for previous errc closing, or return
+		if errc != nil {
+			err = <-errc
+			assert.Equal(t, nil, err)
+			assert.Equal(t, "[Bash Defend Defend Strike Strike]", ctx.piles[cards.Draw].String())
+			assert.Equal(t, "[Strike Strike Defend Defend Strike]", ctx.piles[cards.Hand].String())
+
+			errc = nil
+
+			break
+		}
+		ctx, _ = NewContext(int64(9012), piles)
+		inputc, errc, _ = Execute(StartBattle, ctx)
+
+		card := ctx.CardByIndex(cards.Hand, 0)
+		inputc <- &Input{CardID: card.ID()}
+	}
+
+}
+
+func TestPlayCard(t *testing.T) {
+	piles := make([]*cards.Pile, 4)
+	ctx, err := NewContext(int64(9012), piles)
+	assert.Equal(t, ErrInitCards, err)
+
+	// create the default deck
+	deck, _ := cards.CreatePile([]string{"Strike", "Strike", "Strike", "Strike", "Strike", "Defend", "Defend", "Defend", "Defend", "Bash"})
+
+	piles = make([]*cards.Pile, 5)
+	piles[cards.Deck] = deck
+	// Play the first card
+	ctx, _ = NewContext(int64(9012), piles)
+	inputc, errc, _ := Execute(StartBattle, ctx)
+
+	// Must wait a moment, for turn start function return
+	time.Sleep(time.Millisecond * 10)
+
+	// Now current waiting action is WaitForPlay
+	// Get the first card of hand by locking/unlocking the mutex
+	card := ctx.CardByIndex(cards.Hand, 0)
+	inputc <- &Input{CardID: card.ID()}
+
+	err = <-errc
+	assert.Equal(t, ErrActionNotFound, err)
 }

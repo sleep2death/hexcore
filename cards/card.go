@@ -214,12 +214,17 @@ func CreateCard(name string, ctype CType, base *Status, upgrade *Status) *Card {
 type Pile struct {
 	cards []*Card
 	// Lock
-	mux *sync.Mutex
+	mux sync.Mutex
 }
 
+// PileName -
+type PileName int
+
 const (
+	// Deck Pile
+	Deck PileName = iota
 	// Draw Pile
-	Draw = iota
+	Draw
 	// Hand Pile
 	Hand
 	// Discard Pile
@@ -374,7 +379,7 @@ func (p *Pile) CopyCardsFrom(source *Pile) error {
 
 // CreatePile by given seed and cardset
 func CreatePile(cardSet []string) (p *Pile, err error) {
-	p = &Pile{mux: &sync.Mutex{}}
+	p = &Pile{}
 
 	if cardSet == nil || len(cardSet) == 0 {
 		return p, nil

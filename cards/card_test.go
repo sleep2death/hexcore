@@ -41,7 +41,7 @@ func TestCard(t *testing.T) {
 
 func TestPile(t *testing.T) {
 	random := rand.New(rand.NewSource(9012))
-	p, err := CreatePile(random, []string{"Strike", "Strike", "Strike", "Strike", "Strike"})
+	p, err := CreatePile([]string{"Strike", "Strike", "Strike", "Strike", "Strike"})
 
 	if err != nil {
 		t.Error(err)
@@ -49,7 +49,7 @@ func TestPile(t *testing.T) {
 	assert.Equal(t, 5, p.Num())
 
 	// Draw
-	pp, err := CreatePile(random, []string{"Defend", "Defend", "Defend", "Defend", "Bash"})
+	pp, err := CreatePile([]string{"Defend", "Defend", "Defend", "Defend", "Bash"})
 	pp.Draw(p, p.Num())
 	assert.Equal(t, 10, len(pp.cards))
 	assert.Equal(t, 0, len(p.cards))
@@ -67,7 +67,7 @@ func TestPile(t *testing.T) {
 	assert.Equal(t, "Defend", p.cards[1].Name())
 
 	// Shuffle
-	pp.Shuffle()
+	pp.Shuffle(random)
 	assert.Equal(t, "Strike", pp.cards[0].Name())
 	assert.Equal(t, "Defend", pp.cards[7].Name())
 }

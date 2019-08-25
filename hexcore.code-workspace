@@ -49,11 +49,27 @@
 				],
 				"commands": ["workbench.action.showCommands"]
 			},
+			{
+				"before": [
+					"leader",
+					"v",
+					"s",
+				],
+				"commands": ["workbench.action.splitEditor"]
+			},
+			{
+				"before": [
+					"leader",
+					"q",
+				],
+				"commands": ["workbench.action.closeActiveEditor"]
+    	},
 		],
 		"vim.handleKeys": {
 			"<C-a>": false,
-			"<C-f>": false,
-			"<C-b>": false
+			"<C-f>": true,
+			"<C-b>": true,
+			"<C-l>": true,
 	},
 	"files.exclude": {
 		"**/.classpath": true,

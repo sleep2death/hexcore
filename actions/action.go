@@ -4,16 +4,28 @@ import (
 	"errors"
 	"log"
 	"math/rand"
+	"sync"
+	"time"
 
 	"github.com/sleep2death/hexcore/actors"
 	"github.com/sleep2death/hexcore/cards"
 )
 
 var (
+	// ErrInitCards -
+	ErrInitCards = errors.New("initial cards of context are illigal")
 	// ErrActionListIsEmpty -
 	ErrActionListIsEmpty = errors.New("action list is empty or nil")
 	// ErrInputTimeout -
 	ErrInputTimeout = errors.New("waiting for user input timeout")
+	// ErrSeedNotSet -
+	ErrSeedNotSet = errors.New("seed not set")
+	// ErrActionNotFound -
+	ErrActionNotFound = errors.New("action not found")
+	// ErrNilCard -
+	ErrNilCard = errors.New("card is nil")
+	// ErrNilInput -
+	ErrNilInput = errors.New("input is nil")
 )
 
 // Data for callback
@@ -21,23 +33,56 @@ type Data interface {
 	Send()
 }
 
+// Input -
+type Input struct {
+	// CardID -
+	CardID string
+	// TargetID -
+	TargetID string
+	// EndTurn
+	EndTurn string
+}
+
 // Context of the action
 type Context struct {
-	Seed *rand.Rand
+	seed *rand.Rand
+	mux  *sync.Mutex
 
-	Deck  *cards.Pile   // deck cards in player's pocket :)
-	Cards []*cards.Pile // cards in the battle
+	piles []*cards.Pile // cards in the battle
 
-	Player   *actors.Player    // player
-	Monsters []*actors.Monster // monsters
+	player  *actors.Player    // player
+	monster []*actors.Monster // monsters
 
-	Card   *cards.Card   // current selected card
-	Target *actors.Actor // current selected target
+	input  *Input
+	inputc <-chan *Input
 
-	InputC <-chan string
+	errc chan<- error // error output channel
+	outc chan<- Data  // data output channel
+}
 
-	ErrC chan error
-	OutC chan Data
+// CardByIndex debug and unit test only
+func (ctx *Context) CardByIndex(pilename cards.PileName, idx int) *cards.Card {
+	ctx.mux.Lock()
+	pile := ctx.piles[pilename]
+	card, _ := pile.GetCard(idx)
+	ctx.mux.Unlock()
+	return card
+}
+
+// NewContext -
+func NewContext(seed int64, piles []*cards.Pile) (*Context, error) {
+	// validate cards
+	if len(piles) != 5 || piles[cards.Deck] == nil || piles[cards.Deck].Num() == 0 {
+		return nil, ErrInitCards
+	}
+
+	ctx := &Context{
+		seed:  rand.New(rand.NewSource(seed)),
+		mux:   &sync.Mutex{},
+		piles: piles,
+	}
+
+	return ctx, nil
 }
 
 // Action -
@@ -57,16 +102,39 @@ func run(action Action, ctx *Context) {
 }
 
 // Execute action async
-func Execute(action Action, ctx *Context) {
-	ctx.ErrC = make(chan error)
-	ctx.OutC = make(chan Data)
+func Execute(action Action, ctx *Context) (chan<- *Input, <-chan error, <-chan Data) {
+	inputc := make(chan *Input)
+	errc := make(chan error)
+	outc := make(chan Data)
+
+	ctx.outc = outc
+
+	ctx.input = nil
+
+	ctx.inputc = inputc
+	ctx.errc = errc
+	ctx.outc = outc
 
 	go func() {
-		defer close(ctx.ErrC)
-		defer close(ctx.OutC)
+		defer func() {
+			close(errc)
+			close(outc)
+			close(inputc)
+		}()
 
 		run(action, ctx)
 	}()
+
+	// must wait for a moment
+	// let the execution reach the first input wait point
+	time.Sleep(time.Millisecond * 10)
+	return inputc, errc, outc
+}
+
+// Trace action, print all the fields of the context
+func Trace(ctx *Context) []Action {
+	log.Printf("ctx: <%+v>", ctx)
+	return nil
 }
 
 // Receive example:
@@ -85,10 +153,3 @@ func Execute(action Action, ctx *Context) {
 // 		}
 // 	}()
 // }
-
-// Trace action
-// Do -
-func Trace(ctx *Context) []Action {
-	log.Printf("ctx: <%+v>", ctx)
-	return nil
-}
