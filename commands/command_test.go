@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"errors"
+	"encoding/binary"
 	"log"
 	"testing"
 	"time"
@@ -10,46 +10,60 @@ import (
 )
 
 func WaitForInput(ctx *Context) ([]Command, error) {
-	log.Println("Waiting...")
+	log.Println("Waiting For Input")
 	select {
 	case n := <-ctx.inputc:
-		log.Printf("input is: %d", n)
-		ctx.outputc <- n
+		buf := make([]byte, 4)
+		binary.LittleEndian.PutUint16(buf, uint16(n))
+		ctx.outputc <- buf
 		return []Command{WaitForInput}, nil
 	case <-time.After(time.Second * 5):
-		return nil, errors.New("execution timeout")
+		return nil, ErrTimeout
 	}
 }
 
 func TestChain(t *testing.T) {
-	count := 5
+	count := 0
 	var err error
+	done := make(chan struct{})
 
 	ctx := NewContext()
 	errc := Exec(WaitForInput, ctx)
 
-receive:
-	for {
-		// receive socket packet here, and send it to ctx.Input
-		if count > 0 {
-			ctx.Input() <- 5
-			count --
-			break send
-		}
-		select {
-		// nil channel will block, so it will select the default
-		// closed channel will not block, so it should set to nil
-		case err = <-errc:
-			if err != nil {
-				break loop
+	go func() {
+	receive:
+		for {
+			select {
+			case err = <-errc:
+				break receive
+			case out := <-ctx.Output():
+				v := binary.LittleEndian.Uint16(out)
+				if v > 20 {
+					break receive
+				}
+				log.Printf("output is %v", binary.LittleEndian.Uint16(out))
+
+			default:
+				log.Print("receiving...")
+				// make an execution or send data to inptut channel
 			}
-			errc = nil
-		case out := <-ctx.Output():
-			log.Printf("output is %d", out)
+		}
+
+		close(done)
+	}()
+
+	// write input opration must be different goroutine of receive
+send:
+	for {
+		select {
+		case <-done:
+			break send
+		case ctx.Input() <- count:
+			count++
 		default:
-			// make an execution or send data to inptut channel
+			log.Print("sending...")
 		}
 	}
 
-	assert.Equal(t, "execution timeout", err.Error())
+	assert.Equal(t, ErrTimeout, err)
 }

@@ -6,11 +6,22 @@
 	],
 	"settings": {
     "go.useLanguageServer": true,
+    "[go]": {
+        "editor.snippetSuggestions": "none",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+        }
+    },
+    "gopls": {
+        "usePlaceholders": true, // add parameter placeholders when completing a function
+        "wantCompletionDocumentation": true // for documentation in completion items
+    },
+    "files.eol": "\n",
 		"go.testFlags": [
       "-v",
       "-race"
 		],
-		"go.lintOnSave": "workspace",
 		"vim.leader": ",",
 		"vim.insertModeKeyBindings": [
 			{

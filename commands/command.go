@@ -1,7 +1,13 @@
 package commands
 
 import (
+	"errors"
 	"sync"
+)
+
+var (
+	// ErrTimeout -
+	ErrTimeout = errors.New("execution timeout")
 )
 
 // Context of the execution
@@ -9,13 +15,13 @@ type Context struct {
 	// lock
 	mu sync.Mutex
 	// outputc - output channel of the execution
-	outputc chan int
+	outputc chan []byte
 	// inputc - input channel of the execution
 	inputc chan int
 }
 
 // Output -
-func (c *Context) Output() <-chan int {
+func (c *Context) Output() <-chan []byte {
 	c.mu.Lock()
 	o := c.outputc
 	c.mu.Unlock()
@@ -30,10 +36,18 @@ func (c *Context) Input() chan<- int {
 	return i
 }
 
+// Close -
+func (c *Context) Close() {
+	c.mu.Lock()
+	close(c.inputc)
+	close(c.outputc)
+	c.mu.Unlock()
+}
+
 // NewContext -
 func NewContext() *Context {
 	return &Context{
-		outputc: make(chan int),
+		outputc: make(chan []byte),
 		inputc:  make(chan int),
 	}
 }
@@ -51,7 +65,10 @@ func exec(comm Command, ctx *Context) error {
 
 	if next != nil && len(next) > 0 {
 		for _, n := range next {
-			exec(n, ctx)
+			err = exec(n, ctx)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -63,6 +80,7 @@ func Exec(comm Command, ctx *Context) <-chan error {
 
 	go func() {
 		defer close(errc)
+		defer ctx.Close()
 
 		err := exec(comm, ctx)
 		errc <- err
