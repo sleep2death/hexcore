@@ -10,7 +10,7 @@ import (
 )
 
 func WaitForInput(ctx *Context) ([]Command, error) {
-	log.Println("Waiting For Input")
+	// log.Println("Waiting For Input")
 	select {
 	case n := <-ctx.inputc:
 		buf := make([]byte, 4)
@@ -42,10 +42,6 @@ func TestChain(t *testing.T) {
 					break receive
 				}
 				log.Printf("output is %v", binary.LittleEndian.Uint16(out))
-
-			default:
-				log.Print("receiving...")
-				// make an execution or send data to inptut channel
 			}
 		}
 
@@ -55,13 +51,12 @@ func TestChain(t *testing.T) {
 	// write input opration must be different goroutine of receive
 send:
 	for {
+		count++
+
 		select {
 		case <-done:
 			break send
 		case ctx.Input() <- count:
-			count++
-		default:
-			log.Print("sending...")
 		}
 	}
 
