@@ -11,14 +11,22 @@ import (
 
 func WaitForInput(ctx *Context) ([]Command, error) {
 	// log.Println("Waiting For Input")
+	var buf []byte
 	select {
 	case n := <-ctx.inputc:
-		buf := make([]byte, 4)
+		buf = make([]byte, 4)
 		binary.LittleEndian.PutUint16(buf, uint16(n))
-		ctx.outputc <- buf
-		return []Command{WaitForInput}, nil
 	case <-time.After(time.Second * 5):
 		return nil, ErrTimeout
+	case <-ctx.done:
+		return nil, ErrCanceled
+	}
+
+	select {
+	case ctx.outputc <- buf:
+		return []Command{WaitForInput}, nil
+	case <-ctx.done:
+		return nil, ErrCanceled
 	}
 }
 
@@ -33,15 +41,13 @@ func TestChain(t *testing.T) {
 	go func() {
 	receive:
 		for {
-			select {
-			case err = <-errc:
+			out := <-ctx.Output()
+			v := binary.LittleEndian.Uint16(out)
+			log.Printf("output is %v", binary.LittleEndian.Uint16(out))
+
+			if v >= 20 {
+				ctx.Cancel()
 				break receive
-			case out := <-ctx.Output():
-				v := binary.LittleEndian.Uint16(out)
-				if v > 20 {
-					break receive
-				}
-				log.Printf("output is %v", binary.LittleEndian.Uint16(out))
 			}
 		}
 
@@ -60,5 +66,6 @@ send:
 		}
 	}
 
-	assert.Equal(t, ErrTimeout, err)
+	err = <-errc
+	assert.Equal(t, ErrCanceled, err)
 }

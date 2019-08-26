@@ -8,6 +8,8 @@ import (
 var (
 	// ErrTimeout -
 	ErrTimeout = errors.New("execution timeout")
+	// ErrCanceled -
+	ErrCanceled = errors.New("execution canceled")
 )
 
 // Context of the execution
@@ -18,6 +20,8 @@ type Context struct {
 	outputc chan []byte
 	// inputc - input channel of the execution
 	inputc chan int
+	// done -
+	done chan struct{}
 }
 
 // Output -
@@ -36,12 +40,9 @@ func (c *Context) Input() chan<- int {
 	return i
 }
 
-// Close -
-func (c *Context) Close() {
-	c.mu.Lock()
-	close(c.inputc)
-	close(c.outputc)
-	c.mu.Unlock()
+// Cancel -
+func (c *Context) Cancel() {
+	close(c.done)
 }
 
 // NewContext -
@@ -49,6 +50,7 @@ func NewContext() *Context {
 	return &Context{
 		outputc: make(chan []byte),
 		inputc:  make(chan int),
+		done:    make(chan struct{}),
 	}
 }
 
@@ -80,8 +82,6 @@ func Exec(comm Command, ctx *Context) <-chan error {
 
 	go func() {
 		defer close(errc)
-		defer ctx.Close()
-
 		err := exec(comm, ctx)
 		errc <- err
 	}()
