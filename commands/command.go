@@ -22,6 +22,8 @@ type Context struct {
 	inputc chan int
 	// done -
 	done chan struct{}
+	// data
+	data []byte
 }
 
 // Output -
@@ -82,6 +84,9 @@ func Exec(comm Command, ctx *Context) <-chan error {
 
 	go func() {
 		defer close(errc)
+		defer close(ctx.outputc)
+		defer close(ctx.inputc)
+
 		err := exec(comm, ctx)
 		errc <- err
 	}()
