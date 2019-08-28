@@ -14,16 +14,16 @@ type TestCard struct {
 	desc string
 }
 
-func (c *TestCard) Upgrade() error {
-	return errors.New("can't upgrade")
-}
-
 func (c *TestCard) String() string {
 	return "<" + c.desc + ">"
 }
 
 func (c *TestCard) ID() string {
 	return c.id
+}
+
+func (c *TestCard) Upgrade() error {
+	return errors.New("can't upgrade")
 }
 
 func TestShuffle(t *testing.T) {
@@ -61,7 +61,7 @@ func TestDraw(t *testing.T) {
 	a.Draw(&b)
 	assert.Equal(t, "[<card a> <card b> <card c> <card f> <card e> <card d>]", fmt.Sprint(a))
 
-	err := a.Draw(&b)
+	_, err := a.Draw(&b)
 	assert.Equal(t, ErrNotEnoughCards, err)
 }
 
@@ -86,13 +86,13 @@ func TestPick(t *testing.T) {
 	assert.Equal(t, "<card a>", card.String())
 	assert.Equal(t, 0, idx)
 
-	b.Pick(&a, "d")
+	b.Pick("d", &a)
 	assert.Equal(t, "[<card g> <card h> <card d>]", fmt.Sprint(b))
 	assert.Equal(t, "[<card a> <card b> <card c> <card e> <card f>]", fmt.Sprint(a))
 
-	err := b.Pick(&a, "d")
+	_, err := b.Pick("d", &a)
 	assert.Equal(t, ErrCardNotExist, err)
 
-	err = b.Pick(&c, "d")
+	_, err = b.Pick("d", &c)
 	assert.Equal(t, ErrPileIsNilOrEmpty, err)
 }

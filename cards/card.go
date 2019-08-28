@@ -38,14 +38,16 @@ func (p *Pile) Shuffle(seed *rand.Rand) {
 }
 
 // Draw one card from the source pile
-func (p *Pile) Draw(source *Pile) error {
+func (p *Pile) Draw(source *Pile) (Card, error) {
 	if len(*source) == 0 {
-		return ErrNotEnoughCards
+		return nil, ErrNotEnoughCards
 	}
 
 	*p = append(*p, (*source)[len(*source)-1])
 	*source = (*source)[:len(*source)-1]
-	return nil
+
+	card := (*p)[len(*p)-1]
+	return card, nil
 }
 
 // FindCard return both the card and card index of the pile
@@ -64,17 +66,17 @@ func (p *Pile) FindCard(id string) (card Card, idx int, err error) {
 }
 
 // Pick one card from source pile and add it to the top of the pile
-func (p *Pile) Pick(source *Pile, id string) error {
+func (p *Pile) Pick(id string, source *Pile) (Card, error) {
 	card, idx, err := source.FindCard(id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	*p = append(*p, card)
 
-	card = (*source)[idx]
+	// card = (*source)[idx]
 	copy((*source)[idx:], (*source)[idx+1:])
 	*source = (*source)[:len(*source)-1]
 
-	return nil
+	return card, nil
 }

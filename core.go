@@ -1,73 +1,21 @@
 package hexcore
 
 import (
-	"errors"
+	"github.com/sleep2death/hexcore/actions"
 )
-
-var (
-	// ErrTimeout -
-	ErrTimeout = errors.New("input timeout")
-	//ErrCanceled -
-	ErrCanceled = errors.New("input canceled")
-	//ErrNilAction -
-	ErrNilAction = errors.New("input with a nil action")
-)
-
-// based on the article here: https://go101.org/article/channel-closing.html
-// only sender should close the channel, never the receiver
-
-// Context chain action channel context
-// because the action is executed one by one,
-// so mutex lock is not necessary
-type Context struct {
-	// input channel, it will be closed outside the execution
-	// it's read only, so it can't be closed
-	inc <-chan Action
-	// output channel, it will be closed automatically,
-	// when execution returned, so don't closed it in action
-	outc chan<- []byte
-	// context id, which can be used for finding the certain store
-	id int
-}
-
-// Input channel
-func (c *Context) Input() <-chan Action {
-	return c.inc
-}
-
-// Output channel
-func (c *Context) Output() chan<- []byte {
-	return c.outc
-}
-
-// ID of the store
-func (c *Context) ID() int {
-	return c.id
-}
-
-// Action -
-type Action interface {
-	Exec(ctx *Context) ([]Action, error)
-}
 
 // Start the chain actions
-func Start(action Action, state *State) (<-chan error, chan<- Action, <-chan []byte) {
+func Start(action actions.Action, state *actions.State) (<-chan error, chan<- actions.Action, <-chan []byte) {
 	// an error channel for execution error handling
 	errc := make(chan error)
-	// a []byte channel for some action result data send back
+	// a []byte channel for some action result datastore send back
 	outc := make(chan []byte)
 	// an input channel for executing next action
-	inc := make(chan Action)
+	inc := make(chan actions.Action)
 
-	id := store.AddState(state)
-
-	ctx := &Context{
-		outc: outc,
-		inc:  inc,
-		id:   id,
-	}
-
-	id++
+	// id of the state
+	id := actions.GetStore().AddState(state)
+	ctx := actions.NewContext(inc, outc, id)
 
 	go func() {
 		defer close(errc)
@@ -83,20 +31,23 @@ func Start(action Action, state *State) (<-chan error, chan<- Action, <-chan []b
 }
 
 // chain action execution
-func exec(ctx *Context, action Action) error {
+func exec(ctx *actions.Context, action actions.Action) error {
 	// TODO: context and action validation
-	next, err := action.Exec(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, action := range next {
-		err = exec(ctx, action)
-		// if the error is not nil, break the loop and return
+	if action != nil {
+		next, err := action.Exec(ctx)
 		if err != nil {
 			return err
 		}
-	}
 
-	return nil
+		for _, action := range next {
+			err = exec(ctx, action)
+			// if the error is not nil, break the loop and return
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// when previous action return is nil,
+	// waitForInput will be automatically added into the execution chain
+	return exec(ctx, &actions.WaitForInput{})
 }
