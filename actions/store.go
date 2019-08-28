@@ -30,11 +30,11 @@ type State struct {
 	mu  sync.Mutex
 	num int
 
-	deck    cards.Pile
-	draw    cards.Pile
-	hand    cards.Pile
-	discard cards.Pile
-	exhaust cards.Pile
+	deck    *cards.Pile
+	draw    *cards.Pile
+	hand    *cards.Pile
+	discard *cards.Pile
+	exhaust *cards.Pile
 }
 
 // Num of the state
@@ -53,7 +53,7 @@ func (s *State) SetNum(i int) {
 }
 
 // SetPile of the state
-func (s *State) SetPile(name PileName, pile cards.Pile) {
+func (s *State) SetPile(name PileName, pile *cards.Pile) {
 	s.mu.Lock()
 	switch name {
 	case Deck:
@@ -71,7 +71,7 @@ func (s *State) SetPile(name PileName, pile cards.Pile) {
 }
 
 // GetPile of the state
-func (s *State) GetPile(name PileName) (pile cards.Pile) {
+func (s *State) GetPile(name PileName) (pile *cards.Pile) {
 	s.mu.Lock()
 	switch name {
 	case Deck:
@@ -91,30 +91,39 @@ func (s *State) GetPile(name PileName) (pile cards.Pile) {
 
 // Shuffle the pile of the state
 func (s *State) Shuffle(name PileName, seed *rand.Rand) {
-	s.mu.Lock()
 	pile := s.GetPile(name)
-	(&pile).Shuffle(seed)
+
+	s.mu.Lock()
+	pile.Shuffle(seed)
 	s.mu.Unlock()
 }
 
 // Draw the card from one pile to another
 func (s *State) Draw(from PileName, to PileName) (cards.Card, error) {
-	s.mu.Lock()
 	pFrom := s.GetPile(from)
 	pTo := s.GetPile(to)
-	card, error := pTo.Draw(&pFrom)
+
+	s.mu.Lock()
+	card, error := pTo.Draw(pFrom)
 	s.mu.Unlock()
 	return card, error
 }
 
 // Pick the card from one pile to another
 func (s *State) Pick(id string, from PileName, to PileName) (cards.Card, error) {
-	s.mu.Lock()
 	pFrom := s.GetPile(from)
 	pTo := s.GetPile(to)
-	card, error := pTo.Pick(id, &pFrom)
+
+	s.mu.Lock()
+	card, error := pTo.Pick(id, pFrom)
 	s.mu.Unlock()
 	return card, error
+}
+
+// Copy one pile to another
+func (s *State) Copy(from PileName, to PileName) {
+	pFrom := s.GetPile(from)
+	s.SetPile(to, pFrom.Copy())
 }
 
 var store = &Store{}

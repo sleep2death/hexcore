@@ -3,6 +3,7 @@ package cards
 import (
 	"errors"
 	"math/rand"
+	"strconv"
 )
 
 var (
@@ -26,7 +27,11 @@ var (
 type Card interface {
 	Upgrade() error
 	String() string
+
+	SetID(id string)
 	ID() string
+
+	Copy() Card
 }
 
 // Pile of the cards
@@ -79,4 +84,46 @@ func (p *Pile) Pick(id string, source *Pile) (Card, error) {
 	*source = (*source)[:len(*source)-1]
 
 	return card, nil
+}
+
+// Copy every card of the source pile
+func (p *Pile) Copy() *Pile {
+	copy := make(Pile, 0)
+	for _, card := range *p {
+		copy = append(copy, card.Copy())
+	}
+	return &copy
+}
+
+// TestCard -
+type TestCard struct {
+	id     string
+	copied int
+}
+
+func (c *TestCard) String() string {
+	return "<card " + c.id + ">"
+}
+
+// SetID -
+func (c *TestCard) SetID(id string) {
+	c.id = id
+}
+
+// ID -
+func (c *TestCard) ID() string {
+	return c.id
+}
+
+// Upgrade -
+func (c *TestCard) Upgrade() error {
+	return errors.New("can't upgrade")
+}
+
+// Copy -
+func (c *TestCard) Copy() Card {
+	c.copied++
+	return &TestCard{
+		id: "copy:" + strconv.Itoa(c.copied) + " of <" + c.id + ">",
+	}
 }

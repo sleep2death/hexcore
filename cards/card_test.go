@@ -1,7 +1,6 @@
 package cards
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -9,48 +8,33 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type TestCard struct {
-	id   string
-	desc string
-}
-
-func (c *TestCard) String() string {
-	return "<" + c.desc + ">"
-}
-
-func (c *TestCard) ID() string {
-	return c.id
-}
-
-func (c *TestCard) Upgrade() error {
-	return errors.New("can't upgrade")
-}
-
 func TestShuffle(t *testing.T) {
 	cards := Pile([]Card{
-		&TestCard{id: "a", desc: "card a"},
-		&TestCard{id: "b", desc: "card b"},
-		&TestCard{id: "c", desc: "card c"},
-		&TestCard{id: "d", desc: "card d"},
-		&TestCard{id: "e", desc: "card e"},
-		&TestCard{id: "f", desc: "card f"},
+		&TestCard{id: "a"},
+		&TestCard{id: "b"},
+		&TestCard{id: "c"},
+		&TestCard{id: "d"},
+		&TestCard{id: "e"},
+		&TestCard{id: "f"},
 	})
+
+	cards[3].SetID("3")
 	seed := rand.New(rand.NewSource(99))
 	cards.Shuffle(seed)
-	assert.Equal(t, "[<card f> <card a> <card b> <card c> <card e> <card d>]", fmt.Sprint(cards))
+	assert.Equal(t, "[<card f> <card a> <card b> <card c> <card e> <card 3>]", fmt.Sprint(cards))
 }
 
 func TestDraw(t *testing.T) {
 	a := Pile([]Card{
-		&TestCard{id: "a", desc: "card a"},
-		&TestCard{id: "b", desc: "card b"},
-		&TestCard{id: "c", desc: "card c"},
+		&TestCard{id: "a"},
+		&TestCard{id: "b"},
+		&TestCard{id: "c"},
 	})
 
 	b := Pile([]Card{
-		&TestCard{id: "d", desc: "card d"},
-		&TestCard{id: "e", desc: "card e"},
-		&TestCard{id: "f", desc: "card f"},
+		&TestCard{id: "d"},
+		&TestCard{id: "e"},
+		&TestCard{id: "f"},
 	})
 
 	a.Draw(&b)
@@ -63,21 +47,22 @@ func TestDraw(t *testing.T) {
 
 	_, err := a.Draw(&b)
 	assert.Equal(t, ErrNotEnoughCards, err)
+
 }
 
 func TestPick(t *testing.T) {
 	a := Pile([]Card{
-		&TestCard{id: "a", desc: "card a"},
-		&TestCard{id: "b", desc: "card b"},
-		&TestCard{id: "c", desc: "card c"},
-		&TestCard{id: "d", desc: "card d"},
-		&TestCard{id: "e", desc: "card e"},
-		&TestCard{id: "f", desc: "card f"},
+		&TestCard{id: "a"},
+		&TestCard{id: "b"},
+		&TestCard{id: "c"},
+		&TestCard{id: "d"},
+		&TestCard{id: "e"},
+		&TestCard{id: "f"},
 	})
 
 	b := Pile([]Card{
-		&TestCard{id: "g", desc: "card g"},
-		&TestCard{id: "h", desc: "card h"},
+		&TestCard{id: "g"},
+		&TestCard{id: "h"},
 	})
 
 	c := Pile([]Card{})
@@ -95,4 +80,27 @@ func TestPick(t *testing.T) {
 
 	_, err = b.Pick("d", &c)
 	assert.Equal(t, ErrPileIsNilOrEmpty, err)
+}
+
+func TestCopy(t *testing.T) {
+	a := &TestCard{id: "a"}
+	b := a.Copy()
+	c := a.Copy()
+	d := b.Copy()
+	assert.Equal(t, "copy:1 of <a>", b.ID())
+	assert.Equal(t, "copy:2 of <a>", c.ID())
+	assert.Equal(t, "copy:1 of <copy:1 of <a>>", d.ID())
+
+	err := a.Upgrade()
+	assert.Equal(t, "can't upgrade", err.Error())
+
+	p := Pile([]Card{
+		&TestCard{id: "a"},
+		&TestCard{id: "b"},
+		&TestCard{id: "c"},
+	})
+
+	copy := p.Copy()
+	assert.Equal(t, 3, len(*copy))
+	assert.Equal(t, "&[<card copy:1 of <a>> <card copy:1 of <b>> <card copy:1 of <c>>]", fmt.Sprint(copy))
 }
