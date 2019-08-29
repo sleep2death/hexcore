@@ -41,7 +41,7 @@ type Card interface {
 type Pile []Card
 
 // Shuffle the cards
-func (p *Pile) Shuffle(seed *rand.Rand) {
+func (p *Pile) Shuffle() {
 	rand.Shuffle(len(*p), func(i, j int) { (*p)[i], (*p)[j] = (*p)[j], (*p)[i] })
 }
 

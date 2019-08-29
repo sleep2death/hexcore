@@ -2,7 +2,6 @@ package cards
 
 import (
 	"fmt"
-	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,8 +18,7 @@ func TestShuffle(t *testing.T) {
 	})
 
 	cards[3].SetID("3")
-	seed := rand.New(rand.NewSource(99))
-	cards.Shuffle(seed)
+	cards.Shuffle()
 	assert.Equal(t, "[<card f> <card a> <card b> <card c> <card e> <card 3>]", fmt.Sprint(cards))
 }
 

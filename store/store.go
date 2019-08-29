@@ -1,7 +1,6 @@
 package store
 
 import (
-	"math/rand"
 	"sync"
 
 	"github.com/sleep2death/hexcore/cards"
@@ -90,11 +89,11 @@ func (s *State) GetPile(name PileName) (pile *cards.Pile) {
 }
 
 // Shuffle the pile of the state
-func (s *State) Shuffle(name PileName, seed *rand.Rand) {
+func (s *State) Shuffle(name PileName) {
 	pile := s.GetPile(name)
 
 	s.mu.Lock()
-	pile.Shuffle(seed)
+	pile.Shuffle()
 	s.mu.Unlock()
 }
 
@@ -138,6 +137,13 @@ type Store struct {
 	mu     sync.Mutex
 	idx    int
 	states []*State
+}
+
+// Clear the states
+func (s *Store) Clear() {
+	s.mu.Lock()
+	s.states = nil
+	s.mu.Unlock()
 }
 
 // AddState of the store

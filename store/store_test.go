@@ -2,7 +2,6 @@ package store
 
 import (
 	"fmt"
-	"math/rand"
 	"strconv"
 	"sync"
 	"testing"
@@ -24,11 +23,16 @@ func TestStore(t *testing.T) {
 	c.SetNum(3)
 	assert.Equal(t, 3, c.Num())
 
+	GetStore().Clear()
+
 	// test if the id worksfine in goroutines
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
+
+	var index int
+
 	go func() {
-		GetStore().AddState(a)
+		index = GetStore().AddState(a)
 		wg.Done()
 	}()
 
@@ -38,11 +42,12 @@ func TestStore(t *testing.T) {
 	}()
 
 	wg.Wait()
+
 	id := GetStore().AddState(c)
 	assert.Equal(t, 2, id)
 
-	s := GetStore().State(0)
-	assert.Equal(t, s, a)
+	s := GetStore().State(index)
+	assert.Equal(t, a, s)
 }
 
 func TestPiles(t *testing.T) {
@@ -62,11 +67,10 @@ func TestPiles(t *testing.T) {
 	assert.Equal(t, "0", (*s.GetPile(Deck))[0].ID())
 	assert.Equal(t, "9", (*s.GetPile(Deck))[9].ID())
 
-	seed := rand.New(rand.NewSource(99))
 	deck := s.GetPile(Deck)
 	draw := s.GetPile(Draw)
 
-	s.Shuffle(Deck, seed)
+	s.Shuffle(Deck)
 	assert.Equal(t, "&[<card 1> <card 7> <card 4> <card 0> <card 9> <card 2> <card 3> <card 5> <card 8> <card 6>]", fmt.Sprint(deck))
 
 	s.Draw(Deck, Draw)
