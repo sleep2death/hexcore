@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/sleep2death/hexcore/actions"
+	"github.com/sleep2death/hexcore/store"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -16,7 +17,7 @@ type update struct {
 }
 
 func (a *update) Exec(ctx *actions.Context) ([]actions.Action, error) {
-	state := actions.GetStore().State(ctx.ID())
+	state := store.GetStore().State(ctx.ID())
 	state.SetNum(state.Num() + a.delta)
 
 	bs := make([]byte, 4)
@@ -35,7 +36,7 @@ func (a *update) Exec(ctx *actions.Context) ([]actions.Action, error) {
 
 func TestChainWithInputCancel(t *testing.T) {
 	// a test starting state
-	state := &actions.State{}
+	state := &store.State{}
 	state.SetNum(5)
 
 	errc, inputc, outputc := Start(nil, state)
@@ -73,7 +74,7 @@ sender: // continuously sending data to execution
 
 func TestChainWithTimeout(t *testing.T) {
 	// a test starting state
-	state := &actions.State{}
+	state := &store.State{}
 	state.SetNum(5)
 
 	errc, inputc, _ := Start(&actions.WaitForInput{}, state)

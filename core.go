@@ -1,11 +1,12 @@
 package hexcore
 
 import (
+	"github.com/sleep2death/hexcore/store"
 	"github.com/sleep2death/hexcore/actions"
 )
 
 // Start the chain actions
-func Start(action actions.Action, state *actions.State) (<-chan error, chan<- actions.Action, <-chan []byte) {
+func Start(action actions.Action, state *store.State) (<-chan error, chan<- actions.Action, <-chan []byte) {
 	// an error channel for execution error handling
 	errc := make(chan error)
 	// a []byte channel for some action result datastore send back
@@ -14,7 +15,7 @@ func Start(action actions.Action, state *actions.State) (<-chan error, chan<- ac
 	inc := make(chan actions.Action)
 
 	// id of the state
-	id := actions.GetStore().AddState(state)
+	id := store.GetStore().AddState(state)
 	ctx := actions.NewContext(inc, outc, id)
 
 	go func() {
