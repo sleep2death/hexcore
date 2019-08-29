@@ -1,4 +1,4 @@
-package store
+package hexcore
 
 import (
 	"fmt"
@@ -7,7 +7,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/sleep2death/hexcore/cards"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,9 +45,9 @@ func TestStore(t *testing.T) {
 }
 
 func TestPiles(t *testing.T) {
-	p := make(cards.Pile, 0)
+	p := make(Pile, 0)
 	for i := 0; i < 10; i++ {
-		card := &cards.TestCard{}
+		card := &TestCard{}
 		card.SetID(strconv.Itoa(i))
 		p = append(p, card)
 	}
@@ -56,7 +55,7 @@ func TestPiles(t *testing.T) {
 	s := &State{}
 	s.SetPile(Deck, &p)
 
-	h := make(cards.Pile, 0)
+	h := make(Pile, 0)
 	s.SetPile(Draw, &h)
 
 	assert.Equal(t, "0", (*s.GetPile(Deck))[0].ID())

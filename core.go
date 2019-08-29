@@ -1,21 +1,17 @@
 package hexcore
 
-import (
-	"github.com/sleep2death/hexcore/actions"
-)
-
 // Start the chain actions
-func Start(action actions.Action, state *actions.State) (<-chan error, chan<- actions.Action, <-chan []byte) {
+func Start(action Action, state *State) (<-chan error, chan<- Action, <-chan []byte) {
 	// an error channel for execution error handling
 	errc := make(chan error)
 	// a []byte channel for some action result datastore send back
 	outc := make(chan []byte)
 	// an input channel for executing next action
-	inc := make(chan actions.Action)
+	inc := make(chan Action)
 
 	// id of the state
-	id := actions.GetStore().AddState(state)
-	ctx := actions.NewContext(inc, outc, id)
+	id := GetStore().AddState(state)
+	ctx := NewContext(inc, outc, id)
 
 	go func() {
 		defer close(errc)
@@ -31,7 +27,7 @@ func Start(action actions.Action, state *actions.State) (<-chan error, chan<- ac
 }
 
 // chain action execution
-func exec(ctx *actions.Context, action actions.Action) error {
+func exec(ctx *Context, action Action) error {
 	// TODO: context and action validation
 	if action != nil {
 		next, err := action.Exec(ctx)
@@ -49,5 +45,5 @@ func exec(ctx *actions.Context, action actions.Action) error {
 	}
 	// when previous action return is nil,
 	// waitForInput will be automatically added into the execution chain
-	return exec(ctx, &actions.WaitForInput{})
+	return exec(ctx, &WaitForInput{})
 }

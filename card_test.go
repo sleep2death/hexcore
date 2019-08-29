@@ -1,4 +1,4 @@
-package cards
+package hexcore
 
 import (
 	"fmt"

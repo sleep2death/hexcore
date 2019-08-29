@@ -1,4 +1,4 @@
-package actors
+package hexcore
 
 // Actor of the battle
 type Actor struct {

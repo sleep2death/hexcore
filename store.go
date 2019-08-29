@@ -1,10 +1,8 @@
-package store
+package hexcore
 
 import (
 	"math/rand"
 	"sync"
-
-	"github.com/sleep2death/hexcore/cards"
 )
 
 // PileName -
@@ -30,11 +28,11 @@ type State struct {
 	mu  sync.Mutex
 	num int
 
-	deck    *cards.Pile
-	draw    *cards.Pile
-	hand    *cards.Pile
-	discard *cards.Pile
-	exhaust *cards.Pile
+	deck    *Pile
+	draw    *Pile
+	hand    *Pile
+	discard *Pile
+	exhaust *Pile
 }
 
 // Num of the state
@@ -53,7 +51,7 @@ func (s *State) SetNum(i int) {
 }
 
 // SetPile of the state
-func (s *State) SetPile(name PileName, pile *cards.Pile) {
+func (s *State) SetPile(name PileName, pile *Pile) {
 	s.mu.Lock()
 	switch name {
 	case Deck:
@@ -71,7 +69,7 @@ func (s *State) SetPile(name PileName, pile *cards.Pile) {
 }
 
 // GetPile of the state
-func (s *State) GetPile(name PileName) (pile *cards.Pile) {
+func (s *State) GetPile(name PileName) (pile *Pile) {
 	s.mu.Lock()
 	switch name {
 	case Deck:
@@ -99,7 +97,7 @@ func (s *State) Shuffle(name PileName, seed *rand.Rand) {
 }
 
 // Draw the card from one pile to another
-func (s *State) Draw(from PileName, to PileName) (cards.Card, error) {
+func (s *State) Draw(from PileName, to PileName) (Card, error) {
 	pFrom := s.GetPile(from)
 	pTo := s.GetPile(to)
 
@@ -110,7 +108,7 @@ func (s *State) Draw(from PileName, to PileName) (cards.Card, error) {
 }
 
 // Pick the card from one pile to another
-func (s *State) Pick(id string, from PileName, to PileName) (cards.Card, error) {
+func (s *State) Pick(id string, from PileName, to PileName) (Card, error) {
 	pFrom := s.GetPile(from)
 	pTo := s.GetPile(to)
 

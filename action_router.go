@@ -1,4 +1,4 @@
-package actions
+package hexcore
 
 // NewRouter returns a new router instance.
 func NewRouter() *Router {
