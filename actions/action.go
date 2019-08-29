@@ -60,6 +60,9 @@ type Action interface {
 	Exec(ctx *Context) ([]Action, error)
 }
 
+// Timeout duration
+var timeout = time.Second * 5
+
 // WaitForInput action
 // when previous action return is nil,
 // this action will be automatically added into the execution chain
@@ -74,14 +77,24 @@ func (a *WaitForInput) Exec(ctx *Context) ([]Action, error) {
 			return nil, ErrCanceled
 		}
 		return []Action{action}, nil
-	case <-time.After(time.Second * 5): // timeout
+	case <-time.After(timeout): // timeout
 		return nil, ErrTimeout
 	}
 }
 
-// PlayCard -
-type PlayCard struct {
-	ID string
+// OutputString -
+type OutputString struct {
+	Message string
+}
+
+// Exec -
+func (a *OutputString) Exec(ctx *Context) ([]Action, error) {
+	select {
+	case ctx.Output() <- []byte(a.Message):
+		return nil, nil
+	case <-time.After(timeout): // timeout
+		return nil, ErrTimeout
+	}
 }
 
 // // Exec -

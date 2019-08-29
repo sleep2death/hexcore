@@ -103,6 +103,8 @@ type TestCard struct {
 	id     string
 	name   string
 	copied int
+
+	num int
 }
 
 func (c *TestCard) String() string {
