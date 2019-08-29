@@ -28,6 +28,9 @@ type Card interface {
 	Upgrade() error
 	String() string
 
+	SetName(name string)
+	Name() string
+
 	SetID(id string)
 	ID() string
 
@@ -98,11 +101,22 @@ func (p *Pile) Copy() *Pile {
 // TestCard -
 type TestCard struct {
 	id     string
+	name   string
 	copied int
 }
 
 func (c *TestCard) String() string {
 	return "<card " + c.id + ">"
+}
+
+// SetName -
+func (c *TestCard) SetName(name string) {
+	c.name = name
+}
+
+// Name -
+func (c *TestCard) Name() string {
+	return c.name
 }
 
 // SetID -

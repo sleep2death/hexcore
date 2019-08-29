@@ -3,6 +3,8 @@ package actions
 import (
 	"errors"
 	"time"
+
+	"github.com/sleep2death/hexcore/store"
 )
 
 var (
@@ -77,4 +79,16 @@ func (a *WaitForInput) Exec(ctx *Context) ([]Action, error) {
 	case <-time.After(time.Second * 5): // timeout
 		return nil, ErrTimeout
 	}
+}
+
+// PlayCard -
+type PlayCard struct {
+	ID string
+}
+
+// Exec -
+func (a *PlayCard) Exec(ctx *Context) ([]Action, error) {
+	state := store.GetStore().State(ctx.ID())
+	card, _, _ := state.GetPile(store.Hand).FindCard(a.ID)
+	action := GetActionByCardName(card.Name())
 }

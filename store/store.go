@@ -1,4 +1,4 @@
-package actions
+package store
 
 import (
 	"math/rand"
