@@ -4,10 +4,20 @@ import (
 	"github.com/sleep2death/hexcore/actions"
 )
 
-// Handle is a function that can be registered to a route to handle HTTP
-// requests. Like http.HandlerFunc, but has a third parameter for the values of
-// wildcards (variables).
-type Handle func(Params)
+// ActionType - which is used for group actions
+type ActionType string
+
+const (
+	// Card action type
+	Card ActionType = "Card"
+	// Battle action type
+	Battle ActionType = "Battle"
+	// Normal action type
+	Normal ActionType = "Normal"
+)
+
+// Handle is a function that can be registered to a route to handle Action
+type Handle func(Params) actions.Action
 
 // Param is a single URL parameter, consisting of a key and a value.
 type Param struct {
@@ -31,7 +41,7 @@ func (ps Params) ByName(name string) string {
 	return ""
 }
 
-// Router is a http.Handler which can be used to dispatch requests to different
+// Router can be used to dispatch requests to different
 // handler functions via configurable routes
 type Router struct {
 	trees map[string]*node
@@ -54,38 +64,16 @@ type Router struct {
 	// RedirectTrailingSlash is independent of this option.
 	RedirectFixedPath bool
 
-	// If enabled, the router checks if another method is allowed for the
-	// current route, if the current request can not be routed.
-	// If this is the case, the request is answered with 'Method Not Allowed'
-	// and HTTP status code 405.
-	// If no other Method is allowed, the request is delegated to the NotFound
-	// handler.
-	HandleMethodNotAllowed bool
-
-	// If enabled, the router automatically replies to OPTIONS requests.
-	// Custom OPTIONS handlers take priority over automatic replies.
-	HandleOPTIONS bool
-
-	// Configurable http.Handler which is called when no matching route is
-	// found. If it is not set, http.NotFound is used.
+	// Configurable Handler which is called when no matching route is found.
 	NotFound actions.Action
-
-	// Configurable http.Handler which is called when a request
-	// cannot be routed and HandleMethodNotAllowed is true.
-	// If it is not set, http.Error with http.StatusMethodNotAllowed is used.
-	// The "Allow" header with allowed request methods is set before the handler
-	// is called.
-	MethodNotAllowed actions.Action
 }
 
 // New returns a new initialized Router.
 // Path auto-correction, including trailing slashes, is enabled by default.
 func New() *Router {
 	return &Router{
-		RedirectTrailingSlash:  true,
-		RedirectFixedPath:      true,
-		HandleMethodNotAllowed: true,
-		HandleOPTIONS:          true,
+		RedirectTrailingSlash: true,
+		RedirectFixedPath:     true,
 	}
 }
 
@@ -97,29 +85,32 @@ func New() *Router {
 // This function is intended for bulk loading and to allow the usage of less
 // frequently used, non-standardized or custom methods (e.g. for internal
 // communication with a proxy).
-func (r *Router) Handle(method, path string, handle Handle) {
+func (r *Router) Handle(actionType ActionType, path string, handle Handle) {
 	if path[0] != '/' {
 		panic("path must begin with '/' in path '" + path + "'")
 	}
+
+	group := string(actionType)
 
 	if r.trees == nil {
 		r.trees = make(map[string]*node)
 	}
 
-	root := r.trees[method]
+	root := r.trees[group]
 	if root == nil {
 		root = new(node)
-		r.trees[method] = root
+		r.trees[string(actionType)] = root
 	}
 
 	root.addRoute(path, handle)
 }
 
-func (r *Router) Serve(path string) {
-	if root := r.trees["CARDS"]; root != nil {
+// Serve - get the Action by given path
+func (r *Router) Serve(actionType ActionType, path string) actions.Action {
+	group := string(actionType)
+	if root := r.trees[group]; root != nil {
 		if handle, ps, tsr := root.getValue(path); handle != nil {
-			handle(ps)
-			return
+			return handle(ps)
 		} else if path != "/" {
 			if tsr && r.RedirectTrailingSlash {
 				if len(path) > 1 && path[len(path)-1] == '/' {
@@ -127,8 +118,7 @@ func (r *Router) Serve(path string) {
 				} else {
 					path = path + "/"
 				}
-				r.Serve(path)
-				return
+				return r.Serve(actionType, path)
 			}
 
 			// Try to fix the request path
@@ -139,10 +129,15 @@ func (r *Router) Serve(path string) {
 				)
 				if found {
 					path = string(fixedPath)
-					r.Serve(path)
-					return
+					return r.Serve(actionType, path)
 				}
 			}
 		}
 	}
+
+	if r.NotFound != nil {
+		return r.NotFound
+	}
+
+	return nil
 }
