@@ -94,32 +94,14 @@ func TestRouterGroupTooManyHandlers(t *testing.T) {
 		router.Use(handlers2...)
 	})
 	assert.Panics(t, func() {
-		router.Handle("GET", "/", handlers2...)
+		router.Handle("/", handlers2...)
 	})
 }
 
 func TestRouterGroupBadMethod(t *testing.T) {
 	router := New()
 	assert.Panics(t, func() {
-		router.Handle("get", "/")
-	})
-	assert.Panics(t, func() {
-		router.Handle(" GET", "/")
-	})
-	assert.Panics(t, func() {
-		router.Handle("GET ", "/")
-	})
-	assert.Panics(t, func() {
-		router.Handle("", "/")
-	})
-	assert.Panics(t, func() {
-		router.Handle("PO ST", "/")
-	})
-	assert.Panics(t, func() {
-		router.Handle("1GET", "/")
-	})
-	assert.Panics(t, func() {
-		router.Handle("PATCh", "/")
+		router.Handle("/")
 	})
 }
 
@@ -135,7 +117,7 @@ func testRoutesInterface(t *testing.T, r IRoutes) {
 	handler := func(c *Context) {}
 	assert.Equal(t, r, r.Use(handler))
 
-	assert.Equal(t, r, r.Handle("GET", "/handler", handler))
+	assert.Equal(t, r, r.Handle("/handler", handler))
 	// assert.Equal(t, r, r.Any("/any", handler))
 	// assert.Equal(t, r, r.GET("/", handler))
 	// assert.Equal(t, r, r.POST("/", handler))

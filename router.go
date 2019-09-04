@@ -1,6 +1,8 @@
 package hexcore
 
-import "sync"
+import (
+	"sync"
+)
 
 // HandlerFunc defines the handler used by gin middleware as return value.
 type HandlerFunc func(*Context)
@@ -49,10 +51,8 @@ type Engine struct {
 	// RedirectTrailingSlash is independent of this option.
 	RedirectFixedPath bool
 
-	allNoRoute  HandlersChain
-	allNoMethod HandlersChain
-	noRoute     HandlersChain
-	noMethod    HandlersChain
+	allNoRoute HandlersChain
+	noRoute    HandlersChain
 
 	pool sync.Pool
 	tree *node
@@ -141,6 +141,26 @@ func iterate(path string, routes RoutesInfo, root *node) RoutesInfo {
 	return routes
 }
 
+// NoRoute adds handlers for NoRoute. It return a 404 code by default.
+func (engine *Engine) NoRoute(handlers ...HandlerFunc) {
+	engine.noRoute = handlers
+	engine.rebuild404Handlers()
+}
+
+// Use attaches a global middleware to the router. ie. the middleware attached though Use() will be
+// included in the handlers chain for every single request. Even 404, 405, static files...
+// For example, this is the right place for a logger or error management middleware.
+func (engine *Engine) Use(middleware ...HandlerFunc) IRoutes {
+	engine.RouterGroup.Use(middleware...)
+	engine.rebuild404Handlers()
+	// engine.rebuild405Handlers()
+	return engine
+}
+
+func (engine *Engine) rebuild404Handlers() {
+	engine.allNoRoute = engine.combineHandlers(engine.noRoute)
+}
+
 // Serve conforms to the http.Handler interface.
 func (engine *Engine) Serve(path string) {
 	c := engine.pool.Get().(*Context)
@@ -170,13 +190,11 @@ func (engine *Engine) handleRequest(c *Context) {
 		// c.writermem.WriteHeaderNow()
 		return
 	}
-	if rPath != "/" {
-		if value.tsr && engine.RedirectTrailingSlash {
-			redirectTrailingSlash(c)
-			return
-		}
-		if engine.RedirectFixedPath && redirectFixedPath(c, root, engine.RedirectFixedPath) {
-			return
-		}
-	}
+
+	c.handlers = engine.allNoRoute
+	serveError(c)
+}
+
+func serveError(c *Context) {
+	// TODO: serve error
 }
