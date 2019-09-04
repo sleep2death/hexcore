@@ -9,6 +9,8 @@ require (
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd v0.0.0-20190719114852-fd7a80b32e1f // indirect
 	github.com/cosiner/argv v0.0.1 // indirect
+	github.com/gin-contrib/sse v0.1.0
+	github.com/gin-gonic/gin v1.4.0
 	github.com/go-delve/delve v1.2.0 // indirect
 	github.com/go-kit/kit v0.9.0 // indirect
 	github.com/golang/groupcache v0.0.0-20190702054246-869f871628b6 // indirect
@@ -27,8 +29,6 @@ require (
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mdempsky/gocode v0.0.0-20190203001940-7fb65232883f // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/peterh/liner v1.1.0 // indirect
