@@ -154,7 +154,6 @@ func (engine *Engine) Serve(path string) {
 }
 
 func (engine *Engine) handleRequest(c *Context) {
-	httpMethod := "Default"
 	rPath := c.Path
 	rPath = cleanPath(rPath)
 	unescape := false
@@ -171,7 +170,7 @@ func (engine *Engine) handleRequest(c *Context) {
 		// c.writermem.WriteHeaderNow()
 		return
 	}
-	if httpMethod != "CONNECT" && rPath != "/" {
+	if rPath != "/" {
 		if value.tsr && engine.RedirectTrailingSlash {
 			redirectTrailingSlash(c)
 			return
