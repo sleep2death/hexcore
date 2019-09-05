@@ -20,7 +20,6 @@ func (c HandlersChain) Last() HandlerFunc {
 
 // RouteInfo represents a request route's specification which contains method and path and its handler.
 type RouteInfo struct {
-	Method      string
 	Path        string
 	Handler     string
 	HandlerFunc HandlerFunc
@@ -129,7 +128,6 @@ func iterate(path string, routes RoutesInfo, root *node) RoutesInfo {
 	if len(root.handlers) > 0 {
 		handlerFunc := root.handlers.Last()
 		routes = append(routes, RouteInfo{
-			Method:      "",
 			Path:        path,
 			Handler:     nameOfFunction(handlerFunc),
 			HandlerFunc: handlerFunc,
