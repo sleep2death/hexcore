@@ -15,8 +15,7 @@ type Context struct {
 	fullPath string
 
 	// Errors is a list of errors attached to all the handlers/middlewares who used this context.
-	// Errors
-	// Errors errorMsgs
+	Errors errorMsgs
 
 	engine *Engine
 }
@@ -27,7 +26,7 @@ func (c *Context) reset() {
 	c.handlers = nil
 	c.index = -1
 	c.fullPath = ""
-	// c.Errors = c.Errors[0:0]
+	c.Errors = c.Errors[0:0]
 }
 
 // Copy returns a copy of the current context that can be safely used outside the request's scope.
@@ -108,4 +107,34 @@ func (c *Context) Abort() {
 //     })
 func (c *Context) Param(key string) string {
 	return c.Params.ByName(key)
+}
+
+// Error attaches an error to the current context. The error is pushed to a list of errors.
+// It's a good idea to call Error for each error that occurred during the resolution of a request.
+// A middleware can be used to collect all the errors and push them to a database together,
+// print a log, or append it in the HTTP response.
+// Error will panic if err is nil.
+func (c *Context) Error(err error) *Error {
+	if err == nil {
+		panic("err is nil")
+	}
+
+	parsedError, ok := err.(*Error)
+	if !ok {
+		parsedError = &Error{
+			Err:  err,
+			Type: ErrorTypePrivate,
+		}
+	}
+
+	c.Errors = append(c.Errors, parsedError)
+	return parsedError
+}
+
+// AbortWithError calls `AbortWithStatus()` and `Error()` internally.
+// This method stops the chain, writes the status code and pushes the specified error to `c.Errors`.
+// See Context.Error() for more details.
+func (c *Context) AbortWithError(err error) *Error {
+	c.Abort()
+	return c.Error(err)
 }
