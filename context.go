@@ -26,7 +26,7 @@ func (c *Context) reset() {
 	c.handlers = nil
 	c.index = -1
 	c.fullPath = ""
-	// c.Errors = c.Errors[0:0]
+	c.Errors = c.Errors[0:0]
 }
 
 // Copy returns a copy of the current context that can be safely used outside the request's scope.
@@ -129,4 +129,12 @@ func (c *Context) Error(err error) *Error {
 
 	c.Errors = append(c.Errors, parsedError)
 	return parsedError
+}
+
+// AbortWithError calls `AbortWithStatus()` and `Error()` internally.
+// This method stops the chain, writes the status code and pushes the specified error to `c.Errors`.
+// See Context.Error() for more details.
+func (c *Context) AbortWithError(err error) *Error {
+	c.Abort()
+	return c.Error(err)
 }
