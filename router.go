@@ -195,4 +195,5 @@ func (engine *Engine) handleRequest(c *Context) {
 
 func serveError(c *Context) {
 	// TODO: serve error
+	c.Next()
 }
