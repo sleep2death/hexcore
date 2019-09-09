@@ -38,14 +38,16 @@ func RecoveryWithWriter(out io.Writer) HandlerFunc {
 	}
 	return func(c *Context) {
 		defer func() {
-			if err := recover(); err != nil {
+			err := recover()
+			log.Print(err)
+			if err != nil {
 				if logger != nil {
 					stack := stack(3)
 					logger.Printf("[Recovery] %s panic recovered:\n%s\n%s",
 						timeFormat(time.Now()), err, stack)
 				}
 
-				c.Error(err.(error)) // nolint: errcheck
+				// c.Error(err.(error)) // nolint: errcheck
 				c.Abort()
 			}
 		}()

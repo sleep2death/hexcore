@@ -92,8 +92,8 @@ func New() *Engine {
 func Default() *Engine {
 	// debugPrintWARNINGDefault()
 	engine := New()
-	// engine.Use(Logger(), Recovery())
-	// TODO: logger and recovery
+	engine.Use(Recovery())
+	// TODO: logger
 	return engine
 }
 
@@ -163,8 +163,9 @@ func (engine *Engine) rebuild404Handlers() {
 func (engine *Engine) Serve(path string) {
 	c := engine.pool.Get().(*Context)
 	// c.writermem.reset(w)
-	c.Path = path
 	c.reset()
+
+	c.Path = path
 
 	engine.handleRequest(c)
 
@@ -176,7 +177,6 @@ func (engine *Engine) handleRequest(c *Context) {
 	rPath = cleanPath(rPath)
 	unescape := false
 
-	// Find root of the tree for the given HTTP method
 	root := engine.tree
 	// Find route in tree
 	value := root.getValue(rPath, c.Params, unescape)
