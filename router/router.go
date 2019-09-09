@@ -1,4 +1,4 @@
-package hexcore
+package router
 
 import (
 	"sync"
@@ -30,7 +30,7 @@ type RoutesInfo []RouteInfo
 
 // Engine -
 type Engine struct {
-	RouterGroup
+	RGroup
 
 	allNoRoute HandlersChain
 	noRoute    HandlersChain
@@ -52,7 +52,7 @@ var _ IRouter = &Engine{}
 func New() *Engine {
 	/// debugPrintWARNINGNew()
 	engine := &Engine{
-		RouterGroup: RouterGroup{
+		RGroup: RGroup{
 			Handlers: nil,
 			basePath: "/",
 			root:     true,
@@ -61,7 +61,7 @@ func New() *Engine {
 	}
 	engine.tree.fullPath = "/"
 
-	engine.RouterGroup.engine = engine
+	engine.RGroup.engine = engine
 	engine.pool.New = func() interface{} {
 		return engine.allocateContext()
 	}
@@ -129,7 +129,7 @@ func (engine *Engine) NoRoute(handlers ...HandlerFunc) {
 // included in the handlers chain for every single request. Even 404, 405, static files...
 // For example, this is the right place for a logger or error management middleware.
 func (engine *Engine) Use(middleware ...HandlerFunc) IRoutes {
-	engine.RouterGroup.Use(middleware...)
+	engine.RGroup.Use(middleware...)
 	engine.rebuild404Handlers()
 	// engine.rebuild405Handlers()
 	return engine
