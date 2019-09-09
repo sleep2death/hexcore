@@ -116,18 +116,5 @@ func TestRouterGroupPipeline(t *testing.T) {
 func testRoutesInterface(t *testing.T, r IRoutes) {
 	handler := func(c *Context) {}
 	assert.Equal(t, r, r.Use(handler))
-
 	assert.Equal(t, r, r.Handle("/handler", handler))
-	// assert.Equal(t, r, r.Any("/any", handler))
-	// assert.Equal(t, r, r.GET("/", handler))
-	// assert.Equal(t, r, r.POST("/", handler))
-	// assert.Equal(t, r, r.DELETE("/", handler))
-	// assert.Equal(t, r, r.PATCH("/", handler))
-	// assert.Equal(t, r, r.PUT("/", handler))
-	// assert.Equal(t, r, r.OPTIONS("/", handler))
-	// assert.Equal(t, r, r.HEAD("/", handler))
-
-	// assert.Equal(t, r, r.StaticFile("/file", "."))
-	// assert.Equal(t, r, r.Static("/static", "."))
-	// assert.Equal(t, r, r.StaticFS("/static2", Dir(".", false)))
 }
