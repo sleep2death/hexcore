@@ -113,19 +113,19 @@ func TestListOfRoutes(t *testing.T) {
 	assert.Len(t, list, 4)
 	assertRoutePresent(t, list, RouteInfo{
 		Path:    "/favicon.ico",
-		Handler: "^(.*/vendor/)?github.com/sleep2death/hexcore.handlerTest1$",
+		Handler: "^(.*/vendor/)?github.com/sleep2death/hexcore/router.handlerTest1$",
 	})
 	assertRoutePresent(t, list, RouteInfo{
 		Path:    "/",
-		Handler: "^(.*/vendor/)?github.com/sleep2death/hexcore.handlerTest1$",
+		Handler: "^(.*/vendor/)?github.com/sleep2death/hexcore/router.handlerTest1$",
 	})
 	assertRoutePresent(t, list, RouteInfo{
 		Path:    "/users/",
-		Handler: "^(.*/vendor/)?github.com/sleep2death/hexcore.handlerTest2$",
+		Handler: "^(.*/vendor/)?github.com/sleep2death/hexcore/router.handlerTest2$",
 	})
 	assertRoutePresent(t, list, RouteInfo{
 		Path:    "/users/:id",
-		Handler: "^(.*/vendor/)?github.com/sleep2death/hexcore.handlerTest1$",
+		Handler: "^(.*/vendor/)?github.com/sleep2death/hexcore/router.handlerTest1$",
 	})
 }
 
