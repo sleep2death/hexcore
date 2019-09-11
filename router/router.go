@@ -1,6 +1,7 @@
 package router
 
 import (
+	"io"
 	"sync"
 )
 
@@ -140,7 +141,7 @@ func (engine *Engine) rebuild404Handlers() {
 }
 
 // Serve with the given path
-func (engine *Engine) Serve(path string) {
+func (engine *Engine) Serve(path string, bytes []byte, writer io.WriteCloser) {
 	c := engine.pool.Get().(*Context)
 	// c.writermem.reset(w)
 	c.reset()

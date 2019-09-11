@@ -1,0 +1,18 @@
+
+syntax = "proto3";
+package pb;
+
+import "google/protobuf/any.proto";
+
+message Echo {
+    string message = 1;
+}
+
+message Error {
+    uint32 errorcode = 1;
+    string message = 2;
+}
+
+message AnyMessage {
+    google.protobuf.Any message = 1;
+}

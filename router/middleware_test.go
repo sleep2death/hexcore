@@ -8,7 +8,7 @@ import (
 )
 
 func performRequest(r *Engine, path string) {
-	r.Serve(path)
+	r.Serve(path, nil, nil)
 }
 
 func TestMiddlewareGeneralCase(t *testing.T) {
