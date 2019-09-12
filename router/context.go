@@ -1,6 +1,7 @@
 package router
 
 import (
+	"io"
 	"math"
 	"time"
 )
@@ -9,7 +10,10 @@ const abortIndex int8 = math.MaxInt8 / 2
 
 // Context -
 type Context struct {
-	Path     string
+	Path   string
+	Value  []byte
+	Writer io.WriteCloser
+
 	Params   Params
 	handlers HandlersChain
 	index    int8
@@ -26,6 +30,8 @@ type Context struct {
 
 func (c *Context) reset() {
 	c.Path = ""
+	// see: https://yourbasic.org/golang/clear-slice/
+	c.Value = nil
 	c.Params = c.Params[0:0]
 	c.handlers = nil
 	c.index = -1

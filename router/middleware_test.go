@@ -4,11 +4,26 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/any"
 	"github.com/stretchr/testify/assert"
 )
 
+type TestWriter struct {
+}
+
+func (w *TestWriter) Write(p []byte) (int, error) {
+	return 0, nil
+}
+
+func (w *TestWriter) Close() error {
+	return nil
+}
+
 func performRequest(r *Engine, path string) {
-	r.Serve(path, nil, nil)
+	msg := &any.Any{TypeUrl: path}
+	buf, _ := proto.Marshal(msg)
+	r.Serve(buf, &TestWriter{})
 }
 
 func TestMiddlewareGeneralCase(t *testing.T) {

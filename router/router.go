@@ -3,6 +3,9 @@ package router
 import (
 	"io"
 	"sync"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/any"
 )
 
 // HandlerFunc defines the handler used by gin middleware as return value.
@@ -141,12 +144,20 @@ func (engine *Engine) rebuild404Handlers() {
 }
 
 // Serve with the given path
-func (engine *Engine) Serve(path string, bytes []byte, writer io.WriteCloser) {
+func (engine *Engine) Serve(msg []byte, w io.WriteCloser) {
 	c := engine.pool.Get().(*Context)
-	// c.writermem.reset(w)
+
 	c.reset()
 
-	c.Path = path
+	anyMsg := &any.Any{}
+	// decoding any message
+	if err := proto.Unmarshal(msg, anyMsg); err != nil {
+		c.Error(err)
+	}
+
+	c.Path = anyMsg.GetTypeUrl()
+	c.Value = anyMsg.GetValue()
+	c.Writer = w
 
 	engine.handleRequest(c)
 
@@ -165,16 +176,8 @@ func (engine *Engine) handleRequest(c *Context) {
 		c.handlers = value.handlers
 		c.Params = value.params
 		c.fullPath = value.fullPath
-		c.Next()
-		// c.writermem.WriteHeaderNow()
-		return
+	} else {
+		c.handlers = engine.allNoRoute
 	}
-
-	c.handlers = engine.allNoRoute
-	serveError(c)
-}
-
-func serveError(c *Context) {
-	// TODO: serve error
 	c.Next()
 }

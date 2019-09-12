@@ -48,7 +48,21 @@ func TestServe(t *testing.T) {
 	defer c.WriteMessage(websocket.CloseMessage, []byte{})
 	defer c.Close()
 
-	err = c.WriteMessage(websocket.TextMessage, []byte("Hello"))
+	// Write
+	echo := &pb.Echo{Message: "Hello"}
+	anyMsg, err := ptypes.MarshalAny(echo)
+	anyMsg.TypeUrl = "hex/echo"
+	buf, _ := proto.Marshal(anyMsg)
+
+	err = c.WriteMessage(websocket.BinaryMessage, buf)
+
+	// Read
 	_, message, err := c.ReadMessage()
-	assert.Equal(t, "Hello", string(message))
+
+	anyMsg = &any.Any{}
+	proto.Unmarshal(message, anyMsg)
+	echo = &pb.Echo{}
+	proto.Unmarshal(anyMsg.GetValue(), echo)
+
+	assert.Equal(t, "echo: Hello", echo.GetMessage())
 }
