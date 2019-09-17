@@ -39,7 +39,6 @@ func RecoveryWithWriter(out io.Writer) HandlerFunc {
 	return func(c *Context) {
 		defer func() {
 			err := recover()
-			log.Print(err)
 			if err != nil {
 				if logger != nil {
 					stack := stack(3)

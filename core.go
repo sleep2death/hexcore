@@ -1,9 +1,10 @@
 package hexcore
 
 import (
-	"flag"
+	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -14,7 +15,7 @@ import (
 
 func getCoreHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := upgrader.Upgrade(w, r, nil)
+		c, err := upgrader.Upgrade(w, r, r.Header)
 		if err != nil {
 			log.Print("upgrade failed:", err)
 			http.Error(w, "websocket upgrade failed", http.StatusBadRequest)
@@ -43,9 +44,6 @@ func getCoreHandler() http.HandlerFunc {
 
 			case websocket.TextMessage:
 				_ = c.WriteMessage(websocket.TextMessage, []byte("protocol not supported"))
-				return
-			case websocket.CloseMessage:
-				// log.Printf("client closed the connection")
 				return
 			}
 		}
@@ -80,14 +78,34 @@ func echoHandler(ctx *router.Context) {
 	ctx.Writer.Write(buf)
 }
 
-var addr = flag.String("addr", "localhost:9090", "http service address")
 var upgrader = websocket.Upgrader{} // use default options
+
 var rt = router.Default()
+var srv *http.Server
 
 // Serve -
-func Serve(addr string) {
+func Serve(addr string, done <-chan struct{}) {
 	initHandlers(rt)
 
-	http.HandleFunc("/core", getCoreHandler())
-	log.Fatal(http.ListenAndServe(addr, nil))
+	m := http.NewServeMux()
+	s := http.Server{Addr: addr, Handler: m}
+
+	m.HandleFunc("/core", getCoreHandler())
+
+	go func() {
+		log.Print("server started...")
+		if err := s.ListenAndServe(); err != nil {
+			log.Print(err)
+		}
+	}()
+
+	<-done
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.Shutdown(ctx); err != nil {
+		log.Fatalf("Server Shutdown Failed:%+v", err)
+	}
+	log.Print("server has shutdown...")
 }

@@ -38,15 +38,13 @@ func TestProtobuf(t *testing.T) {
 }
 
 func TestServe(t *testing.T) {
-	go Serve("localhost:9090")
+	done := make(chan struct{})
+	go Serve("localhost:9090", done)
 
 	c, _, err := websocket.DefaultDialer.Dial("ws://localhost:9090/core", nil)
 	if err != nil {
 		log.Fatal("dial:", err)
 	}
-
-	defer c.WriteMessage(websocket.CloseMessage, []byte{})
-	defer c.Close()
 
 	// Write
 	echo := &pb.Echo{Message: "Hello"}
@@ -65,4 +63,11 @@ func TestServe(t *testing.T) {
 	proto.Unmarshal(anyMsg.GetValue(), echo)
 
 	assert.Equal(t, "echo: Hello", echo.GetMessage())
+
+	// closeBytes := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "finished")
+	// c.WriteMessage(websocket.CloseMessage, closeBytes)
+	// c.Close()
+
+	done <- struct{}{}
+	t.Log("ShutDown")
 }
